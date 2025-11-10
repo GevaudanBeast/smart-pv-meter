@@ -66,7 +66,7 @@ DEF_DEBUG_EXPECTED: Final = False
 
 # Config entry version
 CONF_ENTRY_VERSION: Final = 1
-DEFAULT_ENTRY_TITLE: Final = "SPVM â€” Smart PV Meter"
+DEFAULT_ENTRY_TITLE: Final = "SPVM - Smart PV Meter"
 
 # ========== Sensor entity IDs ==========
 S_SPVM_GRID_POWER_AUTO: Final = "spvm_grid_power_auto"
@@ -78,13 +78,13 @@ S_SPVM_EXPECTED_SIMILAR: Final = "spvm_expected_similar"
 S_SPVM_EXPECTED_DEBUG: Final = "spvm_expected_debug"
 
 # ========== Sensor labels ==========
-L_GRID_POWER_AUTO: Final = "SPVM â€” Grid Power Auto"
-L_SURPLUS_VIRTUAL: Final = "SPVM â€” Surplus Virtual"
-L_SURPLUS_NET_RAW: Final = "SPVM â€” Surplus Net Raw"
-L_SURPLUS_NET: Final = "SPVM â€” Surplus Net"
-L_PV_EFFECTIVE_CAP_NOW_W: Final = "SPVM â€” PV Effective Capacity"
-L_EXPECTED_SIMILAR: Final = "SPVM â€” Expected Production (Similar Days)"
-L_EXPECTED_DEBUG: Final = "SPVM â€” Expected Debug Info"
+L_GRID_POWER_AUTO: Final = "SPVM - Grid Power Auto"
+L_SURPLUS_VIRTUAL: Final = "SPVM - Surplus Virtual"
+L_SURPLUS_NET_RAW: Final = "SPVM - Surplus Net Raw"
+L_SURPLUS_NET: Final = "SPVM - Surplus Net"
+L_PV_EFFECTIVE_CAP_NOW_W: Final = "SPVM - PV Effective Capacity"
+L_EXPECTED_SIMILAR: Final = "SPVM - Expected Production (Similar Days)"
+L_EXPECTED_DEBUG: Final = "SPVM - Expected Debug Info"
 
 # ========== Units ==========
 UNIT_W: Final = "W"
