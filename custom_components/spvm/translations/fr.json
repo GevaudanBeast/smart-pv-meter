@@ -1,0 +1,69 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurer Smart PV Meter",
+        "description": "Sélectionne les capteurs sources et paramètres. Les entités suivantes seront créées: sensor.spvm_grid_power_auto, sensor.spvm_surplus_virtual, sensor.spvm_surplus_net_raw, sensor.spvm_surplus_net (à utiliser pour Solar Optimizer), sensor.spvm_pv_effective_cap_now_w, sensor.spvm_expected_similar",
+        "data": {
+          "pv_sensor": "Capteur de production PV (puissance)",
+          "house_sensor": "Capteur de consommation maison (puissance)",
+          "grid_power_sensor": "Capteur puissance réseau (+importe / −exporte) — optionnel",
+          "battery_sensor": "Capteur puissance batterie (+décharge/−charge) — optionnel",
+          "expected_sensor": "Capteur externe « production attendue » (optionnel, si pas k-NN)",
+          "lux_sensor": "Capteur de luminosité (lux) — optionnel mais recommandé pour k-NN",
+          "temp_sensor": "Capteur de température ambiante — optionnel mais recommandé pour k-NN",
+          "hum_sensor": "Capteur d'humidité — optionnel pour k-NN",
+          "reserve_w": "Réserve batterie Zendure (W) gardée en permanence",
+          "cap_max_w": "Limite onduleur (W) — cap dur à 3000W",
+          "degradation_pct": "Usure / dégradation des panneaux (%)",
+          "unit_power": "Unité de puissance affichée (W/kW)",
+          "unit_temp": "Unité de température (°C/°F)",
+          "knn_k": "k-NN : Nombre de voisins (k)",
+          "knn_window_min_minutes": "k-NN : Fenêtre temporelle min (minutes)",
+          "knn_window_max_minutes": "k-NN : Fenêtre temporelle max (minutes)",
+          "knn_weight_lux": "k-NN : Poids luminosité",
+          "knn_weight_temp": "k-NN : Poids température",
+          "knn_weight_hum": "k-NN : Poids humidité",
+          "knn_weight_elev": "k-NN : Poids élévation solaire",
+          "update_interval_seconds": "Intervalle de mise à jour (secondes)",
+          "smoothing_window_seconds": "Fenêtre de lissage pour surplus_net (secondes)",
+          "history_days": "Période historique (jours)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configurer les options SPVM",
+        "description": "Modifier les capteurs et paramètres",
+        "data": {
+          "pv_sensor": "Capteur production PV",
+          "house_sensor": "Capteur consommation maison",
+          "grid_power_sensor": "Capteur réseau (optionnel)",
+          "battery_sensor": "Capteur batterie (optionnel)",
+          "expected_sensor": "Capteur production attendue (optionnel)",
+          "lux_sensor": "Capteur lux (optionnel)",
+          "temp_sensor": "Capteur température (optionnel)",
+          "hum_sensor": "Capteur humidité (optionnel)",
+          "reserve_w": "Réserve batterie (W)",
+          "cap_max_w": "Cap système (W)",
+          "degradation_pct": "Dégradation (%)",
+          "unit_power": "Unité puissance",
+          "unit_temp": "Unité température",
+          "knn_k": "k-NN : k voisins",
+          "knn_window_min_minutes": "k-NN : fenêtre min (min)",
+          "knn_window_max_minutes": "k-NN : fenêtre max (min)",
+          "knn_weight_lux": "k-NN : poids lux",
+          "knn_weight_temp": "k-NN : poids temp",
+          "knn_weight_hum": "k-NN : poids humidité",
+          "knn_weight_elev": "k-NN : poids élévation",
+          "update_interval_seconds": "Intervalle màj (s)",
+          "smoothing_window_seconds": "Fenêtre lissage (s)",
+          "history_days": "Jours historique",
+          "debug_expected": "Activer capteur debug"
+        }
+      }
+    }
+  }
+}
