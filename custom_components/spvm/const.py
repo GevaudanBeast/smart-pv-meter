@@ -138,5 +138,5 @@ NOTE_CAP_LIMIT: Final = "3 kW hard limit applied"
 NOTE_HARD_CAP: Final = "3 kW hard limit applied"
 
 # ========== History & timezone ==========
-HISTORY_DAYS: Final = 1095  # 3 years for better seasonal comparison
+HISTORY_DAYS: Final = 90  # slow system, need solution
 TIMEZONE: Final = "Europe/Paris"
