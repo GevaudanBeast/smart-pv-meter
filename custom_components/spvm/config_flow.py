@@ -24,7 +24,6 @@ from .const import (
     CONF_DEBUG_EXPECTED,
     CONF_DEGRADATION_PCT,
     CONF_ENTRY_VERSION,
-    CONF_EXPECTED_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HOUSE_SENSOR,
     CONF_HUM_SENSOR,
@@ -69,8 +68,6 @@ from .const import (
 )
 
 # Valeurs par dÃ©faut centralisÃ©es
-_EXPECTED_DEFAULT = "sensor.spvm_expected_similar"
-
 
 def _entity_selector(domain: str | None = None) -> EntitySelector:
     """Create entity selector."""
@@ -144,8 +141,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
         """Normalize and validate user input."""
         # expected_sensor: injecte la valeur par dÃ©faut si vide/non dÃ©fini
-        if not user_input.get(CONF_EXPECTED_SENSOR):
-            user_input[CONF_EXPECTED_SENSOR] = _EXPECTED_DEFAULT
 
         # debug_expected: doit Ãªtre un boolÃ©en (pas une entitÃ©)
         user_input[CONF_DEBUG_EXPECTED] = SPVMConfigFlow._coerce_bool(
@@ -187,7 +182,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             defaults = {}
 
         # Valeurs par dÃ©faut visibles dans le formulaire
-        expected_default = defaults.get(CONF_EXPECTED_SENSOR, _EXPECTED_DEFAULT)
         debug_default = SPVMConfigFlow._coerce_bool(
             defaults.get(CONF_DEBUG_EXPECTED, DEF_DEBUG_EXPECTED), DEF_DEBUG_EXPECTED
         )
@@ -212,7 +206,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): _entity_selector("sensor"),
                 # expected_sensor optionnel + dÃ©faut interne
                 vol.Optional(
-                    CONF_EXPECTED_SENSOR,
                     default=expected_default,
                 ): _entity_selector("sensor"),
                 vol.Optional(
@@ -351,8 +344,6 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
         defaults = {**self.config_entry.data, **self.config_entry.options}
 
         # S'assure que le dÃ©faut attendu est visible dans le formulaire d'options
-        if not defaults.get(CONF_EXPECTED_SENSOR):
-            defaults[CONF_EXPECTED_SENSOR] = _EXPECTED_DEFAULT
 
         # Build schema with current values as defaults
         schema = SPVMConfigFlow._get_config_schema(defaults)
