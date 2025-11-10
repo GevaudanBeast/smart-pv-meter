@@ -31,7 +31,8 @@ class ExpectedProductionCalculator:
         self.hass = hass
         self.config = config
         self._cache: dict[str, Any] = {}
-        self._timezone = pytz.timezone(TIMEZONE)
+        # Use dt_util instead of pytz to avoid blocking calls
+        self._timezone = None  # Will be set on first use
 
     async def async_calculate(self) -> dict[str, Any]:
         """Calculate expected production."""
@@ -61,6 +62,10 @@ class ExpectedProductionCalculator:
 
     def _get_current_conditions(self) -> dict[str, Any] | None:
         """Get current weather and time conditions."""
+        # Initialize timezone on first use to avoid blocking calls in __init__
+        if self._timezone is None:
+            self._timezone = pytz.timezone(TIMEZONE)
+        
         now = dt_util.now(self._timezone)
         
         # Get sun elevation
@@ -110,32 +115,69 @@ class ExpectedProductionCalculator:
         end_time = dt_util.now()
         start_time = end_time - timedelta(days=HISTORY_DAYS)
 
-        entities = [self.config["pv_sensor"]]
-        
-        # Add optional sensors
-        if self.config.get("lux_sensor"):
-            entities.append(self.config["lux_sensor"])
-        if self.config.get("temp_sensor"):
-            entities.append(self.config["temp_sensor"])
-        if self.config.get("hum_sensor"):
-            entities.append(self.config["hum_sensor"])
-        
-        entities.append("sun.sun")
-
         try:
-            # Get history
-            historical_states = await get_instance(self.hass).async_add_executor_job(
+            # Get PV history
+            pv_entity = str(self.config["pv_sensor"])
+            pv_states = await get_instance(self.hass).async_add_executor_job(
                 history.state_changes_during_period,
                 self.hass,
                 start_time,
                 end_time,
-                None,
-                entities,
-                False,  # no_attributes
+                pv_entity,
             )
 
+            # Get sun history
+            sun_states = await get_instance(self.hass).async_add_executor_job(
+                history.state_changes_during_period,
+                self.hass,
+                start_time,
+                end_time,
+                "sun.sun",
+            )
+
+            # Get weather sensors history if configured
+            lux_states = {}
+            temp_states = {}
+            hum_states = {}
+            
+            if self.config.get("lux_sensor"):
+                lux_states = await get_instance(self.hass).async_add_executor_job(
+                    history.state_changes_during_period,
+                    self.hass,
+                    start_time,
+                    end_time,
+                    str(self.config["lux_sensor"]),
+                )
+            
+            if self.config.get("temp_sensor"):
+                temp_states = await get_instance(self.hass).async_add_executor_job(
+                    history.state_changes_during_period,
+                    self.hass,
+                    start_time,
+                    end_time,
+                    str(self.config["temp_sensor"]),
+                )
+            
+            if self.config.get("hum_sensor"):
+                hum_states = await get_instance(self.hass).async_add_executor_job(
+                    history.state_changes_during_period,
+                    self.hass,
+                    start_time,
+                    end_time,
+                    str(self.config["hum_sensor"]),
+                )
+
+            # Combine all states
+            combined_states = {
+                **pv_states,
+                **sun_states,
+                **lux_states,
+                **temp_states,
+                **hum_states,
+            }
+
             # Process data
-            data_points = self._process_historical_states(historical_states)
+            data_points = self._process_historical_states(combined_states)
             
             # Cache results
             self._cache["historical_data"] = data_points
@@ -155,11 +197,16 @@ class ExpectedProductionCalculator:
         """Process historical states into data points."""
         data_points = []
         
-        # Get PV states
-        pv_states = historical_states.get(self.config["pv_sensor"], [])
+        # Get PV states - historical_states is a dict with entity_id as key
+        pv_entity = self.config["pv_sensor"]
+        pv_states = historical_states.get(pv_entity, [])
+        
+        if not pv_states:
+            _LOGGER.warning("No PV states found for entity %s", pv_entity)
+            return []
         
         for pv_state in pv_states:
-            if pv_state.state in ("unknown", "unavailable", "none"):
+            if pv_state.state in ("unknown", "unavailable", "none", None):
                 continue
                 
             try:
@@ -401,7 +448,7 @@ class ExpectedProductionCalculator:
         return distance ** 0.5
 
     def _get_time_only_fallback(self, current: dict[str, Any]) -> dict[str, Any]:
-        """Fallback: average of same time ±120min with elevation filter."""
+        """Fallback: average of same time Â±120min with elevation filter."""
         _LOGGER.info("Using time-only fallback")
         
         if "historical_data" not in self._cache:
@@ -411,7 +458,7 @@ class ExpectedProductionCalculator:
         target_minutes = current["minutes_of_day"]
         target_elevation = current["elevation"]
         
-        # Filter by time window (±120 minutes)
+        # Filter by time window (Â±120 minutes)
         candidates = self._filter_by_time_window(
             historical_data, target_minutes, 0, 120
         )
