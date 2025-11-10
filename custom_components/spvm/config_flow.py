@@ -204,9 +204,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     default=defaults.get(CONF_BATTERY_SENSOR, ""),
                 ): _entity_selector("sensor"),
                 vol.Optional(
-                    default=expected_default,
-                ): _entity_selector("sensor"),
-                vol.Optional(
                     CONF_LUX_SENSOR, default=defaults.get(CONF_LUX_SENSOR, "")
                 ): _entity_selector("sensor"),
                 vol.Optional(
