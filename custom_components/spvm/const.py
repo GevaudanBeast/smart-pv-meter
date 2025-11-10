@@ -47,10 +47,11 @@ CONF_DEBUG_EXPECTED: Final = "debug_expected"
 # ========== Default values ==========
 DEF_RESERVE_W: Final = 150
 DEF_UNIT_POWER: Final = "W"
-DEF_UNIT_TEMP: Final = "°C"
+DEF_UNIT_TEMP: Final = "Â°C"
 DEF_CAP_MAX_W: Final = 3000
 DEF_DEGRADATION_PCT: Final = 0.0
 DEF_CAP_LIMIT_W: Final = 3000  # Hard limit
+HARD_CAP_W: Final = 3000  # Hard cap constant for sensor.py
 
 DEF_KNN_K: Final = 5
 DEF_KNN_WINDOW_MIN: Final = 30
@@ -66,7 +67,7 @@ DEF_DEBUG_EXPECTED: Final = False
 
 # Config entry version
 CONF_ENTRY_VERSION: Final = 1
-DEFAULT_ENTRY_TITLE: Final = "SPVM — Smart PV Meter"
+DEFAULT_ENTRY_TITLE: Final = "SPVM â€” Smart PV Meter"
 
 # ========== Sensor entity IDs ==========
 S_SPVM_GRID_POWER_AUTO: Final = "spvm_grid_power_auto"
@@ -78,19 +79,19 @@ S_SPVM_EXPECTED_SIMILAR: Final = "spvm_expected_similar"
 S_SPVM_EXPECTED_DEBUG: Final = "spvm_expected_debug"
 
 # ========== Sensor labels ==========
-L_GRID_POWER_AUTO: Final = "SPVM — Grid Power Auto"
-L_SURPLUS_VIRTUAL: Final = "SPVM — Surplus Virtual"
-L_SURPLUS_NET_RAW: Final = "SPVM — Surplus Net Raw"
-L_SURPLUS_NET: Final = "SPVM — Surplus Net"
-L_PV_EFFECTIVE_CAP_NOW_W: Final = "SPVM — PV Effective Capacity"
-L_EXPECTED_SIMILAR: Final = "SPVM — Expected Production (Similar Days)"
-L_EXPECTED_DEBUG: Final = "SPVM — Expected Debug Info"
+L_GRID_POWER_AUTO: Final = "SPVM â€” Grid Power Auto"
+L_SURPLUS_VIRTUAL: Final = "SPVM â€” Surplus Virtual"
+L_SURPLUS_NET_RAW: Final = "SPVM â€” Surplus Net Raw"
+L_SURPLUS_NET: Final = "SPVM â€” Surplus Net"
+L_PV_EFFECTIVE_CAP_NOW_W: Final = "SPVM â€” PV Effective Capacity"
+L_EXPECTED_SIMILAR: Final = "SPVM â€” Expected Production (Similar Days)"
+L_EXPECTED_DEBUG: Final = "SPVM â€” Expected Debug Info"
 
 # ========== Units ==========
 UNIT_W: Final = "W"
 UNIT_KW: Final = "kW"
-UNIT_C: Final = "°C"
-UNIT_F: Final = "°F"
+UNIT_C: Final = "Â°C"
+UNIT_F: Final = "Â°F"
 KW_TO_W: Final = 1000.0
 
 # ========== Attributes ==========
@@ -133,9 +134,10 @@ SOURCE_SURPLUS_NET: Final = "surplus_virtual - reserve_w (capped)"
 # ========== Notes ==========
 NOTE_RESERVE: Final = "Zendure reserve applied"
 NOTE_CAP: Final = "System cap applied"
-NOTE_UNITS: Final = "Unit conversion applied (kW→W)"
+NOTE_UNITS: Final = "Unit conversion applied (kWâ†’W)"
 NOTE_CAP_LIMIT: Final = "3 kW hard limit applied"
+NOTE_HARD_CAP: Final = "3 kW hard limit applied"
 
 # ========== History & timezone ==========
-HISTORY_DAYS: Final = 90
+HISTORY_DAYS: Final = 1095  # 3 years for better seasonal comparison
 TIMEZONE: Final = "Europe/Paris"
