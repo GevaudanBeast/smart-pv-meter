@@ -5,13 +5,11 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
-import pytz
-
 from homeassistant.components.recorder import get_instance, history
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import HISTORY_DAYS, KW_TO_W, TIMEZONE, UNIT_KW
+from .const import HISTORY_DAYS, KW_TO_W, UNIT_KW
 from .helpers import (
     calculate_distance,
     circular_distance,
@@ -31,8 +29,6 @@ class ExpectedProductionCalculator:
         self.hass = hass
         self.config = config
         self._cache: dict[str, Any] = {}
-        # Use dt_util instead of pytz to avoid blocking calls
-        self._timezone = None  # Will be set on first use
 
     async def async_calculate(self) -> dict[str, Any]:
         """Calculate expected production."""
@@ -62,12 +58,8 @@ class ExpectedProductionCalculator:
 
     def _get_current_conditions(self) -> dict[str, Any] | None:
         """Get current weather and time conditions."""
-        # Initialize timezone on first use to avoid blocking calls in __init__
-        if self._timezone is None:
-            # Utilise le tz HA déjà chargé (pas d'I/O bloquant)
-            self._timezone = dt_util.DEFAULT_TIME_ZONE
-            
-        now = dt_util.now(self._timezone)
+        # Use dt_util which handles timezone automatically without blocking
+        now = dt_util.now()
         
         # Get sun elevation - make it optional
         sun_state = self.hass.states.get("sun.sun")
@@ -112,14 +104,24 @@ class ExpectedProductionCalculator:
         if "historical_data" in self._cache:
             cache_time = self._cache.get("cache_time")
             if cache_time and (dt_util.now() - cache_time).seconds < 3600:
+                _LOGGER.debug("Using cached historical data")
                 return self._cache["historical_data"]
 
+        # Use shorter initial period if cache is empty to speed up first load
+        history_days = HISTORY_DAYS
+        if not self._cache.get("historical_data"):
+            # First load: use only 7 days for quick initialization
+            history_days = min(7, HISTORY_DAYS)
+            _LOGGER.info("First historical data load: using %d days for quick start", history_days)
+
         end_time = dt_util.now()
-        start_time = end_time - timedelta(days=HISTORY_DAYS)
+        start_time = end_time - timedelta(days=history_days)
 
         try:
             # Get PV history
             pv_entity = str(self.config["pv_sensor"])
+            _LOGGER.debug("Fetching %d days of history for %s", history_days, pv_entity)
+            
             pv_states = await get_instance(self.hass).async_add_executor_job(
                 history.state_changes_during_period,
                 self.hass,
@@ -221,12 +223,14 @@ class ExpectedProductionCalculator:
                 if pv_value < 0:
                     continue
                 
-                # Get timestamp
+                # Get timestamp - convert to local timezone using dt_util
                 timestamp = pv_state.last_changed
                 if timestamp.tzinfo is None:
-                    timestamp = self._timezone.localize(timestamp)
+                    # If naive, assume it's UTC and convert to local
+                    timestamp = dt_util.as_local(timestamp.replace(tzinfo=dt_util.UTC))
                 else:
-                    timestamp = timestamp.astimezone(self._timezone)
+                    # Convert to local timezone
+                    timestamp = dt_util.as_local(timestamp)
                 
                 # Create data point
                 point = {
@@ -458,7 +462,7 @@ class ExpectedProductionCalculator:
         return distance ** 0.5
 
     def _get_time_only_fallback(self, current: dict[str, Any]) -> dict[str, Any]:
-        """Fallback: average of same time Â±120min with elevation filter."""
+        """Fallback: average of same time Ã‚Â±120min with elevation filter."""
         _LOGGER.info("Using time-only fallback")
         
         if "historical_data" not in self._cache:
@@ -468,7 +472,7 @@ class ExpectedProductionCalculator:
         target_minutes = current["minutes_of_day"]
         target_elevation = current["elevation"]
         
-        # Filter by time window (Â±120 minutes)
+        # Filter by time window (Ã‚Â±120 minutes)
         candidates = self._filter_by_time_window(
             historical_data, target_minutes, 0, 120
         )
@@ -506,3 +510,97 @@ class ExpectedProductionCalculator:
         """Reset cache."""
         self._cache.clear()
         _LOGGER.debug("Calculator cache cleared")
+
+    async def extend_history(self, days: int) -> None:
+        """Extend history period and reload data."""
+        # Clear cache to force reload with new period
+        self._cache.clear()
+        
+        # Temporarily override HISTORY_DAYS
+        old_days = HISTORY_DAYS
+        
+        # Reload with extended period
+        _LOGGER.info("Extending history to %d days (from %d)", days, old_days)
+        
+        end_time = dt_util.now()
+        start_time = end_time - timedelta(days=days)
+        
+        # Reload historical data with extended period
+        await self._load_historical_data_for_period(start_time, end_time)
+
+    async def _load_historical_data_for_period(
+        self, start_time: datetime, end_time: datetime
+    ) -> None:
+        """Load historical data for a specific period."""
+        try:
+            pv_entity = str(self.config["pv_sensor"])
+            _LOGGER.debug(
+                "Loading history from %s to %s",
+                start_time.isoformat(),
+                end_time.isoformat(),
+            )
+            
+            pv_states = await get_instance(self.hass).async_add_executor_job(
+                history.state_changes_during_period,
+                self.hass,
+                start_time,
+                end_time,
+                pv_entity,
+            )
+
+            sun_states = await get_instance(self.hass).async_add_executor_job(
+                history.state_changes_during_period,
+                self.hass,
+                start_time,
+                end_time,
+                "sun.sun",
+            )
+
+            lux_states = {}
+            temp_states = {}
+            hum_states = {}
+            
+            if self.config.get("lux_sensor"):
+                lux_states = await get_instance(self.hass).async_add_executor_job(
+                    history.state_changes_during_period,
+                    self.hass,
+                    start_time,
+                    end_time,
+                    str(self.config["lux_sensor"]),
+                )
+            
+            if self.config.get("temp_sensor"):
+                temp_states = await get_instance(self.hass).async_add_executor_job(
+                    history.state_changes_during_period,
+                    self.hass,
+                    start_time,
+                    end_time,
+                    str(self.config["temp_sensor"]),
+                )
+            
+            if self.config.get("hum_sensor"):
+                hum_states = await get_instance(self.hass).async_add_executor_job(
+                    history.state_changes_during_period,
+                    self.hass,
+                    start_time,
+                    end_time,
+                    str(self.config["hum_sensor"]),
+                )
+
+            combined_states = {
+                **pv_states,
+                **sun_states,
+                **lux_states,
+                **temp_states,
+                **hum_states,
+            }
+
+            data_points = self._process_historical_states(combined_states)
+            
+            self._cache["historical_data"] = data_points
+            self._cache["cache_time"] = dt_util.now()
+            
+            _LOGGER.info("Loaded %d historical data points", len(data_points))
+            
+        except Exception as err:
+            _LOGGER.error("Error loading historical data: %s", err)
