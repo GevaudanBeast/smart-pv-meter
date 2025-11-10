@@ -298,12 +298,12 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get description of entities that will be created."""
         return f"""
 Entities that will be created:
-â€¢ sensor.{L_GRID_POWER_AUTO.lower().replace(' ', '_').replace('â€”', '')}
-â€¢ sensor.{L_SURPLUS_VIRTUAL.lower().replace(' ', '_').replace('â€”', '')}
-â€¢ sensor.{L_SURPLUS_NET_RAW.lower().replace(' ', '_').replace('â€”', '')}
-â€¢ sensor.{L_SURPLUS_NET.lower().replace(' ', '_').replace('â€”', '')}
-â€¢ sensor.{L_PV_EFFECTIVE_CAP_NOW_W.lower().replace(' ', '_').replace('â€”', '')}
-â€¢ sensor.{L_EXPECTED_SIMILAR.lower().replace(' ', '_').replace('â€”', '')}
+â€¢ sensor.{L_GRID_POWER_AUTO.lower().replace(' ', '_').replace('-', '')}
+â€¢ sensor.{L_SURPLUS_VIRTUAL.lower().replace(' ', '_').replace('-', '')}
+â€¢ sensor.{L_SURPLUS_NET_RAW.lower().replace(' ', '_').replace('-', '')}
+â€¢ sensor.{L_SURPLUS_NET.lower().replace(' ', '_').replace('-', '')}
+â€¢ sensor.{L_PV_EFFECTIVE_CAP_NOW_W.lower().replace(' ', '_').replace('-', '')}
+â€¢ sensor.{L_EXPECTED_SIMILAR.lower().replace(' ', '_').replace('-', '')}
 
 For Solar Optimizer, use: sensor.spvm_surplus_net
 (150W Zendure reserve and 3kW cap already applied)
