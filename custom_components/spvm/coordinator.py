@@ -113,6 +113,13 @@ class SPVMCoordinator(DataUpdateCoordinator):
             self._calculator.reset_cache()
             _LOGGER.info("SPVM cache reset")
 
+    async def extend_history(self, days: int = 30) -> None:
+        """Extend historical data period."""
+        if self._calculator:
+            await self._calculator.extend_history(days)
+            await self.async_request_refresh()
+            _LOGGER.info("SPVM history extended to %d days", days)
+
     @property
     def last_calculation_time(self) -> datetime | None:
         """Return last calculation time."""
