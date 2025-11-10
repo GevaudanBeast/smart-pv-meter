@@ -116,3 +116,43 @@ def circular_distance(minutes1: int, minutes2: int, period: int = 1440) -> float
     """Calculate circular distance between two times (in minutes)."""
     diff = abs(minutes1 - minutes2)
     return min(diff, period - diff)
+
+
+def state_to_float(state: State | None, default: float = 0.0) -> float:
+    """Convert state to float safely."""
+    if state is None or state.state in ("unknown", "unavailable", "none", ""):
+        return default
+    try:
+        return float(str(state.state))
+    except (ValueError, TypeError):
+        return default
+
+
+def convert_to_w(value: float, unit_power: str) -> float:
+    """Convert power value to W based on unit."""
+    if unit_power == UNIT_KW:
+        return value * KW_TO_W
+    return value
+
+
+def clamp(value: float, min_val: float, max_val: float) -> float:
+    """Clamp value between min and max."""
+    return max(min_val, min(max_val, value))
+
+
+def rolling_average(values: list[float], window_size: int) -> float:
+    """Calculate rolling average of last window_size values."""
+    if not values:
+        return 0.0
+    window = values[-window_size:] if len(values) >= window_size else values
+    return sum(window) / len(window) if window else 0.0
+
+
+def merge_config_options(data: dict, options: dict) -> dict:
+    """Merge config data and options, with options taking precedence."""
+    return {**data, **options}
+
+
+def format_timestamp(dt: datetime) -> str:
+    """Format datetime to ISO string."""
+    return dt.isoformat()
