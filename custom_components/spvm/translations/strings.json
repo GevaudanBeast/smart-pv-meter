@@ -1,0 +1,11 @@
+{
+  "title": "Smart PV Meter",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Smart PV Meter Configuration",
+        "description": "Configure your Smart PV Meter integration"
+      }
+    }
+  }
+}
