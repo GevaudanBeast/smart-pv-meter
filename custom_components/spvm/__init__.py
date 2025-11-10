@@ -52,8 +52,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
     }
 
-    # Fetch initial data
-    await coordinator.async_config_entry_first_refresh()
+    # DON'T fetch initial data - it will be loaded lazily on first sensor request
+    # This avoids blocking the setup with 90 days of history loading
+    # await coordinator.async_config_entry_first_refresh()
 
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -69,7 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
-    _LOGGER.debug("SPVM options updated â†’ reloading entry %s", entry.entry_id)
+    _LOGGER.debug("SPVM options updated Ã¢â€ â€™ reloading entry %s", entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
@@ -100,9 +101,18 @@ async def _async_register_services(
         coordinator.reset_cache()
         await coordinator.async_request_refresh()
     
+    async def handle_extend_history(call) -> None:
+        """Handle extend_history service call."""
+        days = call.data.get("days", 30)
+        _LOGGER.info("Service spvm.extend_history called with days=%d", days)
+        await coordinator.extend_history(days)
+    
     hass.services.async_register(
         DOMAIN, "recompute_expected_now", handle_recompute_expected
     )
     hass.services.async_register(
         DOMAIN, "reset_cache", handle_reset_cache
+    )
+    hass.services.async_register(
+        DOMAIN, "extend_history", handle_extend_history
     )
