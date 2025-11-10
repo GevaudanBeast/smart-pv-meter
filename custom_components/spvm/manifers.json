@@ -1,0 +1,12 @@
+{
+  "domain": "spvm",
+  "name": "Smart PV Meter",
+  "codeowners": ["@GevaudanBeast"],
+  "config_flow": true,
+  "documentation": "https://github.com/GevaudanBeast/smart-pv-meter",
+  "issue_tracker": "https://github.com/GevaudanBeast/smart-pv-meter/issues",
+  "iot_class": "calculated",
+  "integration_type": "device",
+  "version": "0.5.0",
+  "requirements": []
+}
