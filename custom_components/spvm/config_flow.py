@@ -140,7 +140,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
         """Normalize and validate user input."""
-        # expected_sensor: injecte la valeur par dÃ©faut si vide/non dÃ©fini
 
         # debug_expected: doit Ãªtre un boolÃ©en (pas une entitÃ©)
         user_input[CONF_DEBUG_EXPECTED] = SPVMConfigFlow._coerce_bool(
@@ -152,7 +151,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             user_input[CONF_UNIT_POWER] = DEF_UNIT_POWER
 
         # Validate temperature unit
-        if user_input.get(CONF_UNIT_TEMP) not in ("Â°C", "Â°F"):
+        if user_input.get(CONF_UNIT_TEMP) not in ("°C", "°F"):
             user_input[CONF_UNIT_TEMP] = DEF_UNIT_TEMP
 
         # Convert numeric values safely
@@ -204,7 +203,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_BATTERY_SENSOR,
                     default=defaults.get(CONF_BATTERY_SENSOR, ""),
                 ): _entity_selector("sensor"),
-                # expected_sensor optionnel + dÃ©faut interne
                 vol.Optional(
                     default=expected_default,
                 ): _entity_selector("sensor"),
@@ -284,8 +282,8 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): SelectSelector(
                     SelectSelectorConfig(
                         options=[
-                            SelectOptionDict(value="Â°C", label="Â°C"),
-                            SelectOptionDict(value="Â°F", label="Â°F"),
+                            SelectOptionDict(value="°C", label="°C"),
+                            SelectOptionDict(value="°F", label="°F"),
                         ],
                         mode="dropdown",
                     )
