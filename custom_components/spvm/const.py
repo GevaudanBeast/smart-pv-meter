@@ -16,7 +16,6 @@ CONF_PV_SENSOR: Final = "pv_sensor"
 CONF_HOUSE_SENSOR: Final = "house_sensor"
 CONF_GRID_POWER_SENSOR: Final = "grid_power_sensor"
 CONF_BATTERY_SENSOR: Final = "battery_sensor"
-CONF_EXPECTED_SENSOR: Final = "expected_sensor"
 CONF_LUX_SENSOR: Final = "lux_sensor"
 CONF_TEMP_SENSOR: Final = "temp_sensor"
 CONF_HUM_SENSOR: Final = "hum_sensor"
@@ -47,7 +46,7 @@ CONF_DEBUG_EXPECTED: Final = "debug_expected"
 # ========== Default values ==========
 DEF_RESERVE_W: Final = 150
 DEF_UNIT_POWER: Final = "W"
-DEF_UNIT_TEMP: Final = "Â°C"
+DEF_UNIT_TEMP: Final = "°C"
 DEF_CAP_MAX_W: Final = 3000
 DEF_DEGRADATION_PCT: Final = 0.0
 DEF_CAP_LIMIT_W: Final = 3000  # Hard limit
@@ -90,8 +89,8 @@ L_EXPECTED_DEBUG: Final = "SPVM â€” Expected Debug Info"
 # ========== Units ==========
 UNIT_W: Final = "W"
 UNIT_KW: Final = "kW"
-UNIT_C: Final = "Â°C"
-UNIT_F: Final = "Â°F"
+UNIT_C: Final = "°C"
+UNIT_F: Final = "°F"
 KW_TO_W: Final = 1000.0
 
 # ========== Attributes ==========
