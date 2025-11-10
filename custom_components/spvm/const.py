@@ -8,7 +8,7 @@ DOMAIN: Final = "spvm"
 NAME: Final = "Smart PV Meter"
 MANUFACTURER: Final = "GevaudanBeast"
 ISSUE_URL: Final = "https://github.com/GevaudanBeast/smart-pv-meter/issues"
-INTEGRATION_VERSION: Final = "0.5.0"
+INTEGRATION_VERSION: Final = "0.5.6"
 
 # ========== Configuration keys ==========
 # Entity selectors
@@ -46,7 +46,7 @@ CONF_DEBUG_EXPECTED: Final = "debug_expected"
 # ========== Default values ==========
 DEF_RESERVE_W: Final = 150
 DEF_UNIT_POWER: Final = "W"
-DEF_UNIT_TEMP: Final = "°C"
+DEF_UNIT_TEMP: Final = "Â°C"
 DEF_CAP_MAX_W: Final = 3000
 DEF_DEGRADATION_PCT: Final = 0.0
 DEF_CAP_LIMIT_W: Final = 3000  # Hard limit
@@ -89,8 +89,8 @@ L_EXPECTED_DEBUG: Final = "SPVM - Expected Debug Info"
 # ========== Units ==========
 UNIT_W: Final = "W"
 UNIT_KW: Final = "kW"
-UNIT_C: Final = "°C"
-UNIT_F: Final = "°F"
+UNIT_C: Final = "Â°C"
+UNIT_F: Final = "Â°F"
 KW_TO_W: Final = 1000.0
 
 # ========== Attributes ==========
@@ -133,10 +133,10 @@ SOURCE_SURPLUS_NET: Final = "surplus_virtual - reserve_w (capped)"
 # ========== Notes ==========
 NOTE_RESERVE: Final = "Zendure reserve applied"
 NOTE_CAP: Final = "System cap applied"
-NOTE_UNITS: Final = "Unit conversion applied (kWâ†’W)"
+NOTE_UNITS: Final = "Unit conversion applied (kWÃ¢â€ â€™W)"
 NOTE_CAP_LIMIT: Final = "3 kW hard limit applied"
 NOTE_HARD_CAP: Final = "3 kW hard limit applied"
 
 # ========== History & timezone ==========
-HISTORY_DAYS: Final = 90  # slow system, need solution
+HISTORY_DAYS: Final = 30  # 30 days - reduced from 1095 for performance
 TIMEZONE: Final = "Europe/Paris"
