@@ -1,83 +1,108 @@
 """Smart PV Meter (SPVM) integration for Home Assistant."""
 from __future__ import annotations
 
+import json
 import logging
-from typing import Any, Final
+from pathlib import Path
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.loader import async_get_integration
+from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
 from .coordinator import SPVMCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: Final[list[Platform]] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
+    """Set up SPVM integration (YAML not supported)."""
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Smart PV Meter from a config entry."""
-    # ✅ Récupérer la version du manifest SANS lire le fichier en synchrone.
-    integration = await async_get_integration(hass, DOMAIN)
-    version = integration.version or "unknown"
+    """Set up SPVM from a config entry."""
+    # Log version for diagnostics (async file read)
+    try:
+        manifest_path = Path(__file__).parent / "manifest.json"
+        version = await hass.async_add_executor_job(
+            lambda: json.loads(manifest_path.read_text()).get("version", "unknown")
+        )
+    except Exception:
+        version = "unknown"
+    
+    _LOGGER.debug(
+        "SPVM async_setup_entry (version=%s, entry_id=%s)",
+        version,
+        entry.entry_id,
+    )
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["version"] = version
-
-    # Coordinator par entry_id (pour services & reload d’options)
+    # Create coordinator for expected production calculation
     coordinator = SPVMCoordinator(hass, entry)
-    hass.data[DOMAIN][entry.entry_id] = coordinator
+    
+    # Store coordinator
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinator": coordinator,
+    }
 
-    # Premier refresh (async, safe)
+    # Fetch initial data
     await coordinator.async_config_entry_first_refresh()
 
-    # Charger plateformes
+    # Setup platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Listener d’options
+    # Register update listener for options changes
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
-    # Services
+    # Register services
     await _async_register_services(hass, coordinator)
 
-    _LOGGER.debug("SPVM initialized (version: %s, entry_id: %s)", version, entry.entry_id)
     return True
+
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    _LOGGER.debug("SPVM options updated â†’ reloading entry %s", entry.entry_id)
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    
     if unload_ok:
-        domain_data = hass.data.get(DOMAIN, {})
-        domain_data.pop(entry.entry_id, None)
+        hass.data[DOMAIN].pop(entry.entry_id)
+        _LOGGER.debug("SPVM entry %s unloaded", entry.entry_id)
+    
     return unload_ok
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Handle options update: reload the entry to apply changes cleanly."""
-    _LOGGER.info("SPVM options updated; reloading config entry %s", entry.entry_id)
-    await hass.config_entries.async_reload(entry.entry_id)
-
-
-async def _async_register_services(hass: HomeAssistant, coordinator: SPVMCoordinator) -> None:
-    """Register SPVM services (recompute_expected_now, reset_cache)."""
-    import logging
-    _log = logging.getLogger(__name__)
-
+async def _async_register_services(
+    hass: HomeAssistant, coordinator: SPVMCoordinator
+) -> None:
+    """Register SPVM services."""
+    
     async def handle_recompute_expected(call) -> None:
-        """Force recompute of expected_now and refresh entities."""
-        _log.info("Service spvm.recompute_expected_now called")
-        # Pas de param pour l’instant; simple refresh
+        """Handle recompute_expected_now service call."""
+        _LOGGER.info("Service spvm.recompute_expected_now called")
         await coordinator.async_request_refresh()
-
+    
     async def handle_reset_cache(call) -> None:
-        """Reset any internal caches and refresh."""
-        _log.info("Service spvm.reset_cache called")
+        """Handle reset_cache service call."""
+        _LOGGER.info("Service spvm.reset_cache called")
         coordinator.reset_cache()
         await coordinator.async_request_refresh()
-
-    # Idempotent: si déjà enregistrés, HA ignore silencieusement
-    hass.services.async_register(DOMAIN, "recompute_expected_now", handle_recompute_expected)
-    hass.services.async_register(DOMAIN, "reset_cache", handle_reset_cache)
+    
+    hass.services.async_register(
+        DOMAIN, "recompute_expected_now", handle_recompute_expected
+    )
+    hass.services.async_register(
+        DOMAIN, "reset_cache", handle_reset_cache
+    )
