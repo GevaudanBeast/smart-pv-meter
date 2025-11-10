@@ -68,7 +68,7 @@ from .const import (
     L_SURPLUS_VIRTUAL,
 )
 
-# Valeurs par défaut centralisées
+# Valeurs par dÃ©faut centralisÃ©es
 _EXPECTED_DEFAULT = "sensor.spvm_expected_similar"
 
 
@@ -101,7 +101,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            # Normalisation/validation (inclut défaut expected_sensor + bool debug)
+            # Normalisation/validation (inclut dÃ©faut expected_sensor + bool debug)
             user_input = self._normalize_input(user_input)
 
             # Create entry
@@ -113,7 +113,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=user_input,
             )
 
-        # Build schema (avec défauts visibles)
+        # Build schema (avec dÃ©fauts visibles)
         schema = self._get_config_schema()
 
         return self.async_show_form(
@@ -126,7 +126,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     def _coerce_bool(value: Any, default: bool = False) -> bool:
-        """Convertit proprement vers bool (gère str/bool/entité héritée)."""
+        """Convertit proprement vers bool (gÃ¨re str/bool/entitÃ© hÃ©ritÃ©e)."""
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
@@ -135,7 +135,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return True
             if s in ("0", "false", "off", "no", "non", ""):
                 return False
-            # ancien bug: une entité 'sensor.xxx' stockée par erreur -> considérer False
+            # ancien bug: une entitÃ© 'sensor.xxx' stockÃ©e par erreur -> considÃ©rer False
             if s.startswith("sensor."):
                 return default
         return default
@@ -143,11 +143,11 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
         """Normalize and validate user input."""
-        # expected_sensor: injecte la valeur par défaut si vide/non défini
+        # expected_sensor: injecte la valeur par dÃ©faut si vide/non dÃ©fini
         if not user_input.get(CONF_EXPECTED_SENSOR):
             user_input[CONF_EXPECTED_SENSOR] = _EXPECTED_DEFAULT
 
-        # debug_expected: doit être un booléen (pas une entité)
+        # debug_expected: doit Ãªtre un boolÃ©en (pas une entitÃ©)
         user_input[CONF_DEBUG_EXPECTED] = SPVMConfigFlow._coerce_bool(
             user_input.get(CONF_DEBUG_EXPECTED, DEF_DEBUG_EXPECTED), DEF_DEBUG_EXPECTED
         )
@@ -157,7 +157,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             user_input[CONF_UNIT_POWER] = DEF_UNIT_POWER
 
         # Validate temperature unit
-        if user_input.get(CONF_UNIT_TEMP) not in ("°C", "°F"):
+        if user_input.get(CONF_UNIT_TEMP) not in ("Â°C", "Â°F"):
             user_input[CONF_UNIT_TEMP] = DEF_UNIT_TEMP
 
         # Convert numeric values safely
@@ -186,7 +186,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if defaults is None:
             defaults = {}
 
-        # Valeurs par défaut visibles dans le formulaire
+        # Valeurs par dÃ©faut visibles dans le formulaire
         expected_default = defaults.get(CONF_EXPECTED_SENSOR, _EXPECTED_DEFAULT)
         debug_default = SPVMConfigFlow._coerce_bool(
             defaults.get(CONF_DEBUG_EXPECTED, DEF_DEBUG_EXPECTED), DEF_DEBUG_EXPECTED
@@ -210,7 +210,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_BATTERY_SENSOR,
                     default=defaults.get(CONF_BATTERY_SENSOR, ""),
                 ): _entity_selector("sensor"),
-                # expected_sensor optionnel + défaut interne
+                # expected_sensor optionnel + dÃ©faut interne
                 vol.Optional(
                     CONF_EXPECTED_SENSOR,
                     default=expected_default,
@@ -291,13 +291,13 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): SelectSelector(
                     SelectSelectorConfig(
                         options=[
-                            SelectOptionDict(value="°C", label="°C"),
-                            SelectOptionDict(value="°F", label="°F"),
+                            SelectOptionDict(value="Â°C", label="Â°C"),
+                            SelectOptionDict(value="Â°F", label="Â°F"),
                         ],
                         mode="dropdown",
                     )
                 ),
-                # Debug (booléen, plus une entité)
+                # Debug (boolÃ©en, plus une entitÃ©)
                 vol.Optional(
                     CONF_DEBUG_EXPECTED,
                     default=debug_default,
@@ -310,12 +310,12 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get description of entities that will be created."""
         return f"""
 Entities that will be created:
-• sensor.{L_GRID_POWER_AUTO.lower().replace(' ', '_').replace('—', '')}
-• sensor.{L_SURPLUS_VIRTUAL.lower().replace(' ', '_').replace('—', '')}
-• sensor.{L_SURPLUS_NET_RAW.lower().replace(' ', '_').replace('—', '')}
-• sensor.{L_SURPLUS_NET.lower().replace(' ', '_').replace('—', '')}
-• sensor.{L_PV_EFFECTIVE_CAP_NOW_W.lower().replace(' ', '_').replace('—', '')}
-• sensor.{L_EXPECTED_SIMILAR.lower().replace(' ', '_').replace('—', '')}
+â€¢ sensor.{L_GRID_POWER_AUTO.lower().replace(' ', '_').replace('â€”', '')}
+â€¢ sensor.{L_SURPLUS_VIRTUAL.lower().replace(' ', '_').replace('â€”', '')}
+â€¢ sensor.{L_SURPLUS_NET_RAW.lower().replace(' ', '_').replace('â€”', '')}
+â€¢ sensor.{L_SURPLUS_NET.lower().replace(' ', '_').replace('â€”', '')}
+â€¢ sensor.{L_PV_EFFECTIVE_CAP_NOW_W.lower().replace(' ', '_').replace('â€”', '')}
+â€¢ sensor.{L_EXPECTED_SIMILAR.lower().replace(' ', '_').replace('â€”', '')}
 
 For Solar Optimizer, use: sensor.spvm_surplus_net
 (150W Zendure reserve and 3kW cap already applied)
@@ -335,21 +335,22 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        # Don't set config_entry explicitly - it's available as self.config_entry
+        super().__init__()
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
         """Manage the options."""
         if user_input is not None:
-            # Normalisation (inclut défaut expected_sensor + bool debug)
+            # Normalisation (inclut dÃ©faut expected_sensor + bool debug)
             user_input = SPVMConfigFlow._normalize_input(user_input)
             return self.async_create_entry(title="", data=user_input)
 
         # Merge data and options for defaults
         defaults = {**self.config_entry.data, **self.config_entry.options}
 
-        # S'assure que le défaut attendu est visible dans le formulaire d'options
+        # S'assure que le dÃ©faut attendu est visible dans le formulaire d'options
         if not defaults.get(CONF_EXPECTED_SENSOR):
             defaults[CONF_EXPECTED_SENSOR] = _EXPECTED_DEFAULT
 
