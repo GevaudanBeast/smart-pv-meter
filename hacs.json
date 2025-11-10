@@ -1,6 +1,7 @@
 {
   "name": "Smart PV Meter",
-  "content_in_root": false,
   "render_readme": true,
-  "homeassistant": "2024.1.0"
+  "zip_release": true,
+  "filename": "smart-pv-meter-v0.5.0.zip",
+  "homeassistant": "2024.4.1"
 }
