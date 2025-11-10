@@ -68,16 +68,18 @@ class ExpectedProductionCalculator:
         
         now = dt_util.now(self._timezone)
         
-        # Get sun elevation
+        # Get sun elevation - make it optional
         sun_state = self.hass.states.get("sun.sun")
-        if not sun_state:
-            _LOGGER.warning("Sun entity not available")
-            return None
-            
-        try:
-            elevation = float(sun_state.attributes.get("elevation", 0))
-        except (ValueError, TypeError):
-            elevation = 0.0
+        elevation = 0.0
+        
+        if sun_state is None:
+            _LOGGER.debug("Sun entity not available, using elevation=0")
+        else:
+            try:
+                elevation = float(sun_state.attributes.get("elevation", 0))
+            except (ValueError, TypeError):
+                _LOGGER.debug("Could not read sun elevation, using 0")
+                elevation = 0.0
 
         # Get sensors
         lux = None
@@ -94,7 +96,6 @@ class ExpectedProductionCalculator:
         if self.config.get("hum_sensor"):
             hum_state = self.hass.states.get(self.config["hum_sensor"])
             hum = to_float(hum_state, None)
-
         return {
             "timestamp": now,
             "minutes_of_day": get_minutes_of_day(now),
@@ -323,14 +324,22 @@ class ExpectedProductionCalculator:
             _LOGGER.warning("No candidates in time window, using fallback")
             return self._get_time_only_fallback(current)
         
-        # Filter by sun elevation
-        candidates = self._filter_by_elevation(
-            candidates, current["elevation"], threshold=10.0
-        )
-        
-        if not candidates:
-            _LOGGER.warning("No candidates after elevation filter, using fallback")
-            return self._get_time_only_fallback(current)
+        # Filter by sun elevation (only if sun.sun is available)
+        if current["elevation"] != 0.0:
+            candidates_before = len(candidates)
+            candidates = self._filter_by_elevation(
+                candidates, current["elevation"], threshold=15.0
+            )
+            
+            if not candidates:
+                _LOGGER.info(
+                    "No candidates after elevation filter (from %d), using fallback. "
+                    "This is normal at night or during weather changes.",
+                    candidates_before
+                )
+                return self._get_time_only_fallback(current)
+        else:
+            _LOGGER.debug("Sun elevation not available, skipping elevation filter")
         
         # Calculate normalization ranges
         norm_ranges = self._calculate_normalization_ranges(candidates)
