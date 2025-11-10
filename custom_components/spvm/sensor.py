@@ -257,7 +257,7 @@ class ExpectedDebugSensor(CoordinatorEntity, BaseSPVMSensor):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     config = merge_config_options(entry.data, entry.options)
     pv_entity = config.get(CONF_PV_SENSOR)
     house_entity = config.get(CONF_HOUSE_SENSOR)
