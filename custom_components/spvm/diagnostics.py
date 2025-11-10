@@ -14,7 +14,7 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Retourner les diagnostics pour une config entry."""
-    coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
     diagnostics = {
         "entry_id": entry.entry_id,
@@ -32,8 +32,7 @@ async def async_get_config_entry_diagnostics(
     }
 
     # Ajouter les info k-NN si disponibles
-    if coordinator.data:
-        diagnostics["knn_cache_size"] = len(coordinator.expected_calculator._cache)
-        diagnostics["knn_normalization"] = coordinator.expected_calculator._normalization
+    if coordinator.data and coordinator._calculator:
+        diagnostics["knn_cache_size"] = len(coordinator._calculator._cache)
 
     return diagnostics
