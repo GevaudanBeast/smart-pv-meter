@@ -64,8 +64,9 @@ class ExpectedProductionCalculator:
         """Get current weather and time conditions."""
         # Initialize timezone on first use to avoid blocking calls in __init__
         if self._timezone is None:
-            self._timezone = pytz.timezone(TIMEZONE)
-        
+            # Utilise le tz HA déjà chargé (pas d'I/O bloquant)
+            self._timezone = dt_util.DEFAULT_TIME_ZONE
+            
         now = dt_util.now(self._timezone)
         
         # Get sun elevation - make it optional
