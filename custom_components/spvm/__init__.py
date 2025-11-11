@@ -37,8 +37,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         version = "unknown"
     
-    _LOGGER.info(
-        "Setting up SPVM integration (version=%s, entry_id=%s)",
+    _LOGGER.debug(
+        "SPVM async_setup_entry (version=%s, entry_id=%s)",
         version,
         entry.entry_id,
     )
@@ -53,7 +53,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
 
     # Fetch initial data
-    _LOGGER.debug("Starting initial data fetch...")
     await coordinator.async_config_entry_first_refresh()
 
     # Setup platforms
@@ -65,7 +64,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register services
     await _async_register_services(hass, coordinator)
 
-    _LOGGER.info("SPVM integration setup complete")
     return True
 
 
