@@ -1,10 +1,8 @@
 """Data update coordinator for SPVM expected production."""
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
 import logging
-import time
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -36,6 +34,9 @@ from .const import (
     DEF_UNIT_POWER,
     DEF_UPDATE_INTERVAL,
     DOMAIN,
+    HISTORY_DAYS,
+    KW_TO_W,
+    TIMEZONE,
 )
 from .expected import ExpectedProductionCalculator
 
@@ -62,64 +63,29 @@ class SPVMCoordinator(DataUpdateCoordinator):
             name=f"{DOMAIN}_coordinator",
             update_interval=update_interval,
         )
-        
-        _LOGGER.debug(
-            "Coordinator initialized with update_interval=%s",
-            update_interval
-        )
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API."""
-        _LOGGER.info("-" * 40)
-        _LOGGER.info("Coordinator update starting...")
-        
         try:
             # Get configuration
             config = self._get_config()
-            _LOGGER.debug(
-                "Config sensors: pv=%s, lux=%s, temp=%s, hum=%s",
-                config.get("pv_sensor"),
-                config.get("lux_sensor"),
-                config.get("temp_sensor"),
-                config.get("hum_sensor"),
-            )
             
             # Initialize calculator if needed
             if self._calculator is None:
-                _LOGGER.info("Initializing ExpectedProductionCalculator...")
                 self._calculator = ExpectedProductionCalculator(
                     hass=self.hass,
                     config=config,
                 )
-                _LOGGER.info("Calculator initialized")
             
             # Calculate expected production
-            _LOGGER.info("Calculating expected production...")
-            calc_start = time.time()
-            
             result = await self._calculator.async_calculate()
             
-            calc_elapsed = time.time() - calc_start
-            _LOGGER.info(
-                "Calculation completed in %.2fs: method=%s, expected=%.1fW, samples=%s",
-                calc_elapsed,
-                result.get("method", "unknown"),
-                result.get("expected_w", 0),
-                result.get("samples", "N/A"),
-            )
-            
             self._last_calculation_time = dt_util.now()
-            _LOGGER.info("-" * 40)
             
             return result
             
         except Exception as err:
-            _LOGGER.error(
-                "Error updating SPVM expected production: %s",
-                err,
-                exc_info=True
-            )
-            _LOGGER.info("-" * 40)
+            _LOGGER.error("Error updating SPVM expected production: %s", err)
             raise UpdateFailed(f"Error updating SPVM data: {err}") from err
 
     def _get_config(self) -> dict[str, Any]:
@@ -145,26 +111,9 @@ class SPVMCoordinator(DataUpdateCoordinator):
         """Reset calculator cache."""
         if self._calculator:
             self._calculator.reset_cache()
-            _LOGGER.info("SPVM calculator cache reset")
-        else:
-            _LOGGER.warning("Cannot reset cache: calculator not initialized")
+            _LOGGER.info("SPVM cache reset")
 
     @property
     def last_calculation_time(self) -> datetime | None:
         """Return last calculation time."""
         return self._last_calculation_time
-    
-    @property
-    def cache_size(self) -> int:
-        """Return cache size safely (for diagnostics)."""
-        try:
-            if self._calculator and hasattr(self._calculator, "_cache"):
-                return len(self._calculator._cache)
-        except Exception as err:
-            _LOGGER.debug("Could not get cache size: %s", err)
-        return 0
-    
-    @property
-    def calculator(self) -> ExpectedProductionCalculator | None:
-        """Return calculator instance (for diagnostics)."""
-        return self._calculator
