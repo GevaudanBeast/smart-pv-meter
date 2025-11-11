@@ -1,10 +1,8 @@
 """Smart PV Meter (SPVM) integration for Home Assistant."""
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Any
 
@@ -39,87 +37,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         version = "unknown"
     
-    _LOGGER.info("=" * 60)
-    _LOGGER.info("SPVM setup starting (version=%s, entry_id=%s)", version, entry.entry_id)
+    _LOGGER.info(
+        "Setting up SPVM integration (version=%s, entry_id=%s)",
+        version,
+        entry.entry_id,
+    )
+
+    # Create coordinator for expected production calculation
+    coordinator = SPVMCoordinator(hass, entry)
     
-    try:
-        # Create coordinator for expected production calculation
-        _LOGGER.info("Creating coordinator...")
-        coordinator = SPVMCoordinator(hass, entry)
-        
-        # Store coordinator
-        hass.data.setdefault(DOMAIN, {})
-        hass.data[DOMAIN][entry.entry_id] = {
-            "coordinator": coordinator,
-        }
-        _LOGGER.info("Coordinator stored in hass.data")
+    # Store coordinator
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinator": coordinator,
+    }
 
-        # Fetch initial data with timeout (non-blocking)
-        _LOGGER.info("Fetching initial data (timeout: 120s)...")
-        fetch_start = time.time()
-        
-        try:
-            async with asyncio.timeout(120):  # 2 minutes max
-                await coordinator.async_config_entry_first_refresh()
-            
-            fetch_elapsed = time.time() - fetch_start
-            _LOGGER.info("Initial data loaded successfully in %.2fs", fetch_elapsed)
-            
-        except asyncio.TimeoutError:
-            _LOGGER.warning(
-                "Initial data fetch TIMEOUT after 120s - continuing setup, "
-                "data will be fetched in background"
-            )
-            # Don't fail setup, coordinator will retry
-            
-        except Exception as err:
-            _LOGGER.warning(
-                "Initial data fetch failed: %s - continuing setup, "
-                "data will be fetched in background",
-                err
-            )
-            # Don't fail setup, coordinator will retry
+    # Fetch initial data
+    _LOGGER.debug("Starting initial data fetch...")
+    await coordinator.async_config_entry_first_refresh()
 
-        # Setup platforms
-        _LOGGER.info("Setting up sensor platform...")
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-        _LOGGER.info("Sensor platform setup completed")
+    # Setup platforms
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-        # Register update listener for options changes
-        entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    # Register update listener for options changes
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
-        # Register services
-        _LOGGER.info("Registering services...")
-        await _async_register_services(hass, coordinator)
-        _LOGGER.info("Services registered")
-        
-        _LOGGER.info("SPVM setup COMPLETED successfully")
-        _LOGGER.info("=" * 60)
-        return True
-        
-    except Exception as err:
-        _LOGGER.error("SPVM setup FAILED: %s", err, exc_info=True)
-        _LOGGER.info("=" * 60)
-        raise
+    # Register services
+    await _async_register_services(hass, coordinator)
+
+    _LOGGER.info("SPVM integration setup complete")
+    return True
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
-    _LOGGER.debug("SPVM options updated → reloading entry %s", entry.entry_id)
+    _LOGGER.debug("SPVM options updated Ã¢â€ â€™ reloading entry %s", entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    _LOGGER.info("Unloading SPVM entry %s", entry.entry_id)
-    
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
-        _LOGGER.info("SPVM entry %s unloaded successfully", entry.entry_id)
-    else:
-        _LOGGER.warning("SPVM entry %s unload failed", entry.entry_id)
+        _LOGGER.debug("SPVM entry %s unloaded", entry.entry_id)
     
     return unload_ok
 
@@ -146,4 +108,3 @@ async def _async_register_services(
     hass.services.async_register(
         DOMAIN, "reset_cache", handle_reset_cache
     )
-    _LOGGER.debug("Services registered: recompute_expected_now, reset_cache")
