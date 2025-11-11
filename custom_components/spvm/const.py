@@ -40,6 +40,9 @@ CONF_KNN_WEIGHT_ELEV: Final = "knn_weight_elev"
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 CONF_SMOOTHING_WINDOW: Final = "smoothing_window"
 
+# History
+CONF_ENABLE_HISTORY: Final = "enable_history"
+
 # Debug
 CONF_DEBUG_EXPECTED: Final = "debug_expected"
 
@@ -62,6 +65,7 @@ DEF_KNN_WEIGHT_ELEV: Final = 0.3
 
 DEF_UPDATE_INTERVAL: Final = 60  # seconds
 DEF_SMOOTHING_WINDOW: Final = 45  # seconds
+DEF_ENABLE_HISTORY: Final = True  # Enable by default
 DEF_DEBUG_EXPECTED: Final = False
 
 # Config entry version
