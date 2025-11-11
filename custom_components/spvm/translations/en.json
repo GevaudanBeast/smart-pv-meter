@@ -17,7 +17,7 @@
           "cap_max_w": "Inverter saturation limit (W) - hard cap at 3000W",
           "degradation_pct": "Panel wear / degradation (%)",
           "unit_power": "Displayed power unit (W/kW)",
-          "unit_temp": "Temperature unit (Â°C/Â°F)",
+          "unit_temp": "Temperature unit (°C/°F)",
           "knn_k": "k-NN: Number of neighbors (k)",
           "knn_window_min_minutes": "k-NN: Minimum time window (minutes)",
           "knn_window_max_minutes": "k-NN: Maximum time window (minutes)",
@@ -27,7 +27,6 @@
           "knn_weight_elev": "k-NN: Weight for sun elevation",
           "update_interval_seconds": "Update interval (seconds)",
           "smoothing_window_seconds": "Smoothing window for surplus_net (seconds)",
-          "enable_history": "Enable historical data (for predictions)",
           "history_days": "Historical data period (days)"
         }
       }
@@ -61,7 +60,6 @@
           "knn_weight_elev": "k-NN: elevation weight",
           "update_interval_seconds": "Update interval (s)",
           "smoothing_window_seconds": "Smoothing window (s)",
-          "enable_history": "Enable historical data",
           "history_days": "History days",
           "debug_expected": "Enable debug sensor"
         }
