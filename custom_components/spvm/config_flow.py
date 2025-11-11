@@ -260,6 +260,11 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_SMOOTHING_WINDOW,
                     default=defaults.get(CONF_SMOOTHING_WINDOW, DEF_SMOOTHING_WINDOW),
                 ): _number_selector(10, 180, 5),
+                # History
+                vol.Optional(
+                    CONF_ENABLE_HISTORY,
+                    default=defaults.get(CONF_ENABLE_HISTORY, DEF_ENABLE_HISTORY),
+                ): bool,
                 # Units
                 vol.Optional(
                     CONF_UNIT_POWER,
