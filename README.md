@@ -1,225 +1,258 @@
-# 🌞 Smart PV Meter (SPVM)
+# Smart PV Meter (SPVM) v0.5.7
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/release/GevaudanBeast/smart-pv-meter.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
-[![License](https://img.shields.io/github/license/GevaudanBeast/smart-pv-meter.svg)](LICENSE)
+<div align="center">
+  <img src="custom_components/spvm/logo.png" alt="SPVM Logo" width="200"/>
+  
+  [![GitHub Release](https://img.shields.io/github/v/release/GevaudanBeast/smart-pv-meter)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+  [![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
+  [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.11.0-blue.svg)](https://www.home-assistant.io/)
+</div>
 
-**Smart PV Meter** est une intégration Home Assistant qui calcule votre surplus solaire en temps réel avec prédiction intelligente de la production photovoltaïque via algorithme k-NN.
+**Smart PV Meter** est une intégration Home Assistant qui calcule le surplus solaire en temps réel pour optimiser la consommation d'énergie domestique. Elle prend en compte la production PV, la consommation de la maison, l'état de la batterie et applique automatiquement une réserve configurable.
 
-## ✨ Caractéristiques principales
+---
 
-- 🔋 **Calcul automatique du surplus net** - Prêt pour Solar Optimizer
-- 🤖 **Prédiction k-NN** - Basée sur 3 ans d'historique et conditions météo
-- 📊 **6 capteurs dédiés** - Grid power, surplus virtual/raw/net, capacité effective, prédiction
-- ⚙️ **Configuration intuitive** - Via interface graphique Home Assistant
-- 🔄 **Mise à jour temps réel** - Intervalle configurable (défaut: 60s)
-- 🌐 **Multilingue** - Français et Anglais
+## 🎯 Fonctionnalités principales
 
-## 📦 Version actuelle : 0.5.6b (Patch de stabilité)
+### ⚡ Calcul en temps réel
+- **Surplus net** : Production PV - Consommation - Batterie - Réserve (plafonné à 3000W)
+- **Puissance réseau auto** : Calculée automatiquement si non disponible
+- **Capacité PV effective** : Prend en compte la dégradation des panneaux
 
-### 🔧 Correctifs critiques
+### 📊 Prédiction par k-NN
+- **Prédiction de production** basée sur l'historique et les conditions actuelles
+- Algorithme k-NN utilisant luminosité, température, humidité et élévation solaire
+- Cache intelligent pour performances optimales
 
-Cette version corrige les problèmes de redémarrages en boucle :
+### 🔋 Optimisations
+- **Réserve Zendure** : 150W par défaut (configurable)
+- **Cap système** : Limite à 3000W (hard cap)
+- **Lissage temporel** : Moyennes mobiles pour stabilité
 
-- ✅ **Blocage event loop** - Remplacement pytz par dt_util
-- ✅ **Timeout au setup** - Timeout de 120s avec continuation en background
-- ✅ **Timeout requêtes SQL** - Timeout de 90s avec fallback théorique
-- ✅ **Gestion timezone** - Fallbacks robustes
-- ✅ **Attributs privés** - Propriétés publiques pour diagnostics
+---
 
-[📝 Voir le CHANGELOG complet](CHANGELOG.md)
+## 📦 Installation
 
-## 🚀 Installation
+### Via HACS (Recommandé)
 
-### Via HACS (recommandé)
-
-1. Ouvrir HACS dans Home Assistant
-2. Aller dans "Intégrations"
-3. Cliquer sur "⋮" (menu) → "Dépôts personnalisés"
-4. Ajouter l'URL : `https://github.com/GevaudanBeast/smart-pv-meter`
-5. Catégorie : "Intégration"
-6. Chercher "Smart PV Meter"
-7. Cliquer sur "Télécharger"
-8. Redémarrer Home Assistant
+1. Ouvre **HACS** dans Home Assistant
+2. Clique sur **Intégrations**
+3. Cherche **"Smart PV Meter"**
+4. Clique sur **Télécharger**
+5. Redémarre Home Assistant
+6. Va dans **Paramètres** → **Appareils et services** → **Ajouter une intégration**
+7. Cherche **"Smart PV Meter"** et configure
 
 ### Installation manuelle
 
-1. Télécharger la dernière version depuis [Releases](https://github.com/GevaudanBeast/smart-pv-meter/releases)
-2. Extraire le contenu dans `custom_components/spvm/`
-3. Redémarrer Home Assistant
+1. Télécharge la dernière release depuis [GitHub](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+2. Copie le dossier `custom_components/spvm` dans ton dossier `config/custom_components/`
+3. Redémarre Home Assistant
+4. Ajoute l'intégration via l'interface
+
+---
 
 ## ⚙️ Configuration
 
-### 1. Ajouter l'intégration
+### Capteurs requis
+- **Capteur de production PV** (puissance en W ou kW)
+- **Capteur de consommation maison** (puissance en W)
 
-**Paramètres** → **Appareils et services** → **Ajouter une intégration** → Chercher "**Smart PV Meter**"
+### Capteurs optionnels
+- **Capteur de puissance réseau** (import/export)
+- **Capteur de batterie** (charge/décharge)
+- **Capteur de luminosité** (lux) - recommandé pour k-NN
+- **Capteur de température** - recommandé pour k-NN
+- **Capteur d'humidité** - optionnel pour k-NN
 
-### 2. Capteurs requis
+### Paramètres système
+- **Réserve batterie** : 150W par défaut (Zendure)
+- **Cap maximum** : 3000W (limite onduleur)
+- **Dégradation panneaux** : 0% par défaut
+- **Unités** : W ou kW, °C ou °F
 
-| Capteur | Description | Exemple |
-|---------|-------------|---------|
-| **Production PV** | Puissance produite par les panneaux | `sensor.pv_power` |
-| **Consommation maison** | Puissance consommée par la maison | `sensor.house_power` |
+### Paramètres k-NN
+- **k voisins** : 5 par défaut
+- **Fenêtre temporelle** : 30-90 minutes
+- **Poids** : Luminosité (0.4), Température (0.2), Humidité (0.1), Élévation (0.3)
+- **Historique** : 7 jours par défaut (optimisé pour démarrage rapide)
 
-### 3. Capteurs optionnels
-
-| Capteur | Description | Utilité |
-|---------|-------------|---------|
-| **Puissance réseau** | Import/export réseau | Calcul surplus précis |
-| **Puissance batterie** | Charge/décharge batterie | Prise en compte batterie |
-| **Luminosité** | Capteur lux | ⭐ k-NN précis |
-| **Température** | Température extérieure | ⭐ k-NN précis |
-| **Humidité** | Humidité relative | k-NN amélioré |
-
-### 4. Paramètres système
-
-| Paramètre | Défaut | Description |
-|-----------|--------|-------------|
-| **Réserve batterie** | 150 W | Réserve Zendure permanente |
-| **Cap système** | 3000 W | Limite onduleur (hard cap à 3kW) |
-| **Dégradation panneaux** | 0 % | Usure des panneaux solaires |
+---
 
 ## 📊 Entités créées
 
-L'intégration crée automatiquement 6 capteurs :
+| Entité | Description | Usage |
+|--------|-------------|-------|
+| `sensor.spvm_surplus_net` | **Surplus net final** (avec réserve et cap) | ⭐ **Pour Solar Optimizer** |
+| `sensor.spvm_surplus_net_raw` | Surplus brut (avant lissage) | Diagnostic |
+| `sensor.spvm_surplus_virtual` | Surplus virtuel calculé | Diagnostic |
+| `sensor.spvm_grid_power_auto` | Puissance réseau auto-calculée | Diagnostic |
+| `sensor.spvm_pv_effective_cap_now_w` | Capacité PV effective | Info |
+| `sensor.spvm_expected_similar` | Production attendue (k-NN) | Prédiction |
 
-### Capteurs principaux
+### 🎯 Capteur principal pour Solar Optimizer
 
-**`sensor.spvm_surplus_net`** ⭐  
-→ **Surplus net final** - À utiliser avec Solar Optimizer  
-→ Inclut réserve 150W et cap 3kW, lissé sur 45s
+**Utilise `sensor.spvm_surplus_net`** - Il inclut déjà :
+- ✅ Réserve Zendure (150W)
+- ✅ Cap système (3000W)
+- ✅ Lissage temporel
+- ✅ Calcul temps réel parfait
 
-**`sensor.spvm_expected_similar`**  
-→ **Production attendue** via k-NN (kW)  
-→ Basée sur historique 3 ans + conditions actuelles
-
-### Capteurs intermédiaires
-
-- `sensor.spvm_grid_power_auto` - Puissance réseau calculée
-- `sensor.spvm_surplus_virtual` - Surplus brut (avant réserve)
-- `sensor.spvm_surplus_net_raw` - Surplus après réserve (avant lissage)
-- `sensor.spvm_pv_effective_cap_now_w` - Capacité effective avec dégradation
-
-## 🎯 Utilisation avec Solar Optimizer
-
-```yaml
-# configuration.yaml
-solar_optimizer:
-  surplus_sensor: sensor.spvm_surplus_net  # ⭐ Utiliser ce capteur
-  # La réserve Zendure (150W) et le cap (3kW) sont déjà appliqués
-```
+---
 
 ## 🔧 Services disponibles
 
 ### `spvm.recompute_expected_now`
-
-Force un recalcul immédiat de la production attendue.
-
-```yaml
-service: spvm.recompute_expected_now
-```
+Force un recalcul immédiat de la production attendue
 
 ### `spvm.reset_cache`
-
-Vide le cache historique et recharge les données.
-
-```yaml
-service: spvm.reset_cache
-```
-
-## 🐛 Debug et diagnostics
-
-### Activer le logging debug
-
-```yaml
-# configuration.yaml
-logger:
-  default: info
-  logs:
-    custom_components.spvm: debug
-```
-
-### Télécharger les diagnostics
-
-**Paramètres** → **Appareils et services** → **Smart PV Meter** → **⋮** → **Télécharger les diagnostics**
-
-### Vérifier les logs
-
-```bash
-tail -f /config/home-assistant.log | grep -i spvm
-```
-
-Chercher cette séquence au démarrage :
-```
-SPVM setup starting (version=0.5.6b)
-Creating coordinator...
-Fetching initial data...
-SPVM setup COMPLETED successfully
-```
-
-## 📈 Comportement de la prédiction k-NN
-
-| Période | Méthode | Précision | Normal |
-|---------|---------|-----------|--------|
-| Jour 1-7 | `theoretical_capacity` | 40% | ✅ |
-| Jour 7-30 | `time_only_fallback` | 60-80% | ✅ |
-| Jour 30+ | `knn` | 85-95% | ✅ |
-| Nuit | `night_time` (0W) | 100% | ✅ |
-
-La précision s'améliore automatiquement au fil du temps avec l'accumulation de données historiques.
-
-## ⚡ Performance
-
-| Métrique | Première fois | Suivantes |
-|----------|---------------|-----------|
-| Setup initial | 30-120s | 2-5s |
-| Update coordinator | 5-15s | 0.5-2s |
-| Calcul k-NN | 3-10s | 0.5-1s |
-
-## 🔄 Migration depuis v0.5.5
-
-Aucune action requise, la v0.5.6b est 100% compatible.
-
-Simplement :
-1. Installer la nouvelle version via HACS
-2. Redémarrer Home Assistant
-3. Vérifier les logs
-
-## 🚧 Prochaines versions
-
-### v0.5.7 (Optimisations performance) - Prévue
-
-- Fenêtres saisonnières (±15j au lieu de 1095j)
-- Filtrage nuit basé sur luminosité (LUX)
-- Échantillonnage intelligent 5 minutes
-- Cache 24h au lieu de 1h
-
-**Gain attendu : -90% de données, 10x plus rapide**
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à :
-
-- 🐛 Signaler des bugs via [Issues](https://github.com/GevaudanBeast/smart-pv-meter/issues)
-- 💡 Proposer des améliorations
-- 🌐 Aider à la traduction
-- 📝 Améliorer la documentation
-
-## 📝 Licence
-
-Ce projet est sous licence MIT. Voir [LICENSE](LICENSE) pour plus de détails.
-
-## 🙏 Remerciements
-
-- Home Assistant community
-- HACS pour la distribution
-- Tous les contributeurs et testeurs
-
-## 📞 Support
-
-- **Issues GitHub** : [smart-pv-meter/issues](https://github.com/GevaudanBeast/smart-pv-meter/issues)
-- **Discussions** : [smart-pv-meter/discussions](https://github.com/GevaudanBeast/smart-pv-meter/discussions)
+Vide le cache historique et force un rechargement des données
 
 ---
 
-**Développé avec ❤️ par @GevaudanBeast**
+## 📈 Changelog v0.5.7
+
+### 🚀 Améliorations
+- **Démarrage ultra-rapide** : `HISTORY_DAYS` réduit à 7 jours par défaut
+- **Gestion propre de HISTORY_DAYS=0** : Désactivation complète possible
+- **Logs nettoyés** : Suppression des logs de debug, logs INFO clairs
+- **Performance optimisée** : Cache intelligent, moins de requêtes DB
+
+### 🐛 Corrections
+- **Fix timeout au démarrage** : Sur systèmes avec large base de données (2M+ états)
+- **Fix chargement historique** : Ne bloque plus le démarrage de Home Assistant
+- **Fix logs** : Messages clairs sur l'état du chargement d'historique
+
+### 🔄 Changements techniques
+- `HISTORY_DAYS` : 1095 jours → 7 jours (configurable)
+- Chargement historique non-bloquant si HISTORY_DAYS=0
+- Messages utilisateur améliorés
+
+### ⚠️ Breaking Changes
+Aucun - Migration automatique depuis 0.5.6
+
+---
+
+## 🚨 Migration depuis 0.5.6
+
+### Automatique
+La migration est **automatique** - aucune action requise.
+
+### Changements de comportement
+- **Production attendue** : Basée sur 7 jours au lieu de 3 ans
+  - Plus rapide au démarrage
+  - Toujours précise pour prédictions journalières
+  - Peut être augmenté dans les options si besoin
+
+### Si démarrage lent
+Si tu as une grosse base de données (>2M états) et que le démarrage est lent :
+
+1. Édite `/config/custom_components/spvm/const.py`
+2. Change `HISTORY_DAYS: Final = 0` (désactive complètement)
+3. Redémarre Home Assistant
+4. Les calculs temps réel fonctionnent parfaitement
+5. Seule `sensor.spvm_expected_similar` affichera 0.0 kW
+
+---
+
+## 🎓 Exemples d'utilisation
+
+### Avec Solar Optimizer
+
+```yaml
+# configuration.yaml
+solar_optimizer:
+  surplus_sensor: sensor.spvm_surplus_net
+  # SPVM gère déjà la réserve et le cap !
+```
+
+### Automation basique
+
+```yaml
+automation:
+  - alias: "Démarrer chauffe-eau sur surplus"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.spvm_surplus_net
+        above: 2000  # 2kW de surplus
+        for: "00:05:00"  # Pendant 5 minutes
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.chauffe_eau
+```
+
+---
+
+## 🔍 Diagnostic
+
+### Logs utiles
+```bash
+# Voir les logs SPVM
+ha core logs | grep "custom_components.spvm"
+
+# Voir le chargement d'historique
+ha core logs | grep "Fetching.*days"
+
+# Voir les erreurs
+ha core logs | grep -E "(ERROR|WARNING)" | grep spvm
+```
+
+### Vérifier les valeurs
+```bash
+# Lister toutes les entités SPVM
+ha states list | grep spvm
+```
+
+### Performance
+- **Démarrage attendu** : < 5 secondes avec HISTORY_DAYS=7
+- **Utilisation mémoire** : ~50-100 Mo selon historique
+- **CPU** : Négligeable en fonctionnement normal
+
+---
+
+## 📚 Documentation complète
+
+Consulte le [Wiki GitHub](https://github.com/GevaudanBeast/smart-pv-meter/wiki) pour :
+- Guide de configuration détaillé
+- Explications des algorithmes k-NN
+- Exemples d'automations avancées
+- FAQ et troubleshooting
+
+---
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues !
+
+1. Fork le projet
+2. Crée une branche (`git checkout -b feature/AmazingFeature`)
+3. Commit tes changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvre une Pull Request
+
+---
+
+## 🐛 Bugs et suggestions
+
+Ouvre une issue sur [GitHub](https://github.com/GevaudanBeast/smart-pv-meter/issues)
+
+---
+
+## 📜 Licence
+
+Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+---
+
+## 💡 Crédits
+
+Développé par [@GevaudanBeast](https://github.com/GevaudanBeast)
+
+Inspiré par les besoins de la communauté Home Assistant française pour l'optimisation solaire.
+
+---
+
+## ⭐ Support
+
+Si ce projet t'aide, n'hésite pas à mettre une étoile sur GitHub ! ⭐
