@@ -8,7 +8,7 @@ DOMAIN: Final = "spvm"
 NAME: Final = "Smart PV Meter"
 MANUFACTURER: Final = "GevaudanBeast"
 ISSUE_URL: Final = "https://github.com/GevaudanBeast/smart-pv-meter/issues"
-INTEGRATION_VERSION: Final = "0.5.6"
+INTEGRATION_VERSION: Final = "0.5.0"
 
 # ========== Configuration keys ==========
 # Entity selectors
@@ -138,5 +138,5 @@ NOTE_CAP_LIMIT: Final = "3 kW hard limit applied"
 NOTE_HARD_CAP: Final = "3 kW hard limit applied"
 
 # ========== History & timezone ==========
-HISTORY_DAYS: Final = 30  # 30 days - reduced from 1095 for performance
+HISTORY_DAYS: Final = 1095  # 3 years for better seasonal comparison
 TIMEZONE: Final = "Europe/Paris"
