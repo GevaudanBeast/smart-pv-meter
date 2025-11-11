@@ -5,13 +5,11 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
-import pytz
-
 from homeassistant.components.recorder import get_instance, history
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import HISTORY_DAYS, KW_TO_W, TIMEZONE, UNIT_KW
+from .const import HISTORY_DAYS, KW_TO_W, UNIT_KW
 from .helpers import (
     calculate_distance,
     circular_distance,
@@ -31,8 +29,6 @@ class ExpectedProductionCalculator:
         self.hass = hass
         self.config = config
         self._cache: dict[str, Any] = {}
-        # Use dt_util instead of pytz to avoid blocking calls
-        self._timezone = None  # Will be set on first use
 
     async def async_calculate(self) -> dict[str, Any]:
         """Calculate expected production."""
@@ -65,11 +61,9 @@ class ExpectedProductionCalculator:
 
     def _get_current_conditions(self) -> dict[str, Any] | None:
         """Get current weather and time conditions."""
-        # Initialize timezone on first use to avoid blocking calls in __init__
-        if self._timezone is None:
-            self._timezone = pytz.timezone(TIMEZONE)
-        
-        now = dt_util.now(self._timezone)
+        # Use dt_util.now() which already handles timezone properly
+        # This avoids blocking call to pytz.timezone()
+        now = dt_util.now()
         
         # Get sun elevation - make it optional
         sun_state = self.hass.states.get("sun.sun")
@@ -234,10 +228,8 @@ class ExpectedProductionCalculator:
                 
                 # Get timestamp
                 timestamp = pv_state.last_changed
-                if timestamp.tzinfo is None:
-                    timestamp = self._timezone.localize(timestamp)
-                else:
-                    timestamp = timestamp.astimezone(self._timezone)
+                # dt_util.as_local handles timezone conversion properly
+                timestamp = dt_util.as_local(timestamp)
                 
                 # Create data point
                 point = {
