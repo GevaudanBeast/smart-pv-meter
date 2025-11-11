@@ -40,11 +40,13 @@ class ExpectedProductionCalculator:
                 _LOGGER.warning("Cannot get current conditions")
                 return self._get_empty_result()
 
-            # Get historical data (returns [] if HISTORY_DAYS=0)
+            # Get historical data (returns [] if disabled or HISTORY_DAYS=0)
             historical_data = await self._get_historical_data()
             
             if not historical_data:
-                if HISTORY_DAYS == 0:
+                if not self.config.get("enable_history", True):
+                    _LOGGER.info("Expected production disabled (history disabled by user)")
+                elif HISTORY_DAYS == 0:
                     _LOGGER.info("Expected production disabled (HISTORY_DAYS=0)")
                 else:
                     _LOGGER.warning("No historical data available")
@@ -104,6 +106,11 @@ class ExpectedProductionCalculator:
 
     async def _get_historical_data(self) -> list[dict[str, Any]]:
         """Get historical data from recorder."""
+        # Check if history is enabled in config
+        if not self.config.get("enable_history", True):
+            _LOGGER.info("Historical data loading disabled by user configuration")
+            return []
+        
         # If HISTORY_DAYS is 0, skip historical data loading entirely
         if HISTORY_DAYS == 0:
             _LOGGER.info("Historical data loading disabled (HISTORY_DAYS=0)")
