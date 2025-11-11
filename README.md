@@ -1,258 +1,297 @@
-# Smart PV Meter (SPVM) v0.5.7
+# Guide de déploiement SPVM v0.5.8
 
-<div align="center">
-  <img src="custom_components/spvm/logo.png" alt="SPVM Logo" width="200"/>
-  
-  [![GitHub Release](https://img.shields.io/github/v/release/GevaudanBeast/smart-pv-meter)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
-  [![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
-  [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.11.0-blue.svg)](https://www.home-assistant.io/)
-</div>
+## 🔥 Correctif critique : Erreur 500 du Config Flow
 
-**Smart PV Meter** est une intégration Home Assistant qui calcule le surplus solaire en temps réel pour optimiser la consommation d'énergie domestique. Elle prend en compte la production PV, la consommation de la maison, l'état de la batterie et applique automatiquement une réserve configurable.
+Cette version corrige l'erreur **500 Internal Server Error** qui empêchait la configuration de l'intégration SPVM dans Home Assistant.
 
 ---
 
-## 🎯 Fonctionnalités principales
+## 📋 Prérequis
 
-### ⚡ Calcul en temps réel
-- **Surplus net** : Production PV - Consommation - Batterie - Réserve (plafonné à 3000W)
-- **Puissance réseau auto** : Calculée automatiquement si non disponible
-- **Capacité PV effective** : Prend en compte la dégradation des panneaux
-
-### 📊 Prédiction par k-NN
-- **Prédiction de production** basée sur l'historique et les conditions actuelles
-- Algorithme k-NN utilisant luminosité, température, humidité et élévation solaire
-- Cache intelligent pour performances optimales
-
-### 🔋 Optimisations
-- **Réserve Zendure** : 150W par défaut (configurable)
-- **Cap système** : Limite à 3000W (hard cap)
-- **Lissage temporel** : Moyennes mobiles pour stabilité
+- Home Assistant 2024.1 ou supérieur
+- Accès au répertoire `/config/custom_components/`
+- Droits d'écriture sur les fichiers de configuration
 
 ---
 
-## 📦 Installation
+## 🚀 Installation / Mise à jour
 
-### Via HACS (Recommandé)
+### Option 1 : Installation manuelle (recommandée pour ce correctif)
 
-1. Ouvre **HACS** dans Home Assistant
-2. Clique sur **Intégrations**
-3. Cherche **"Smart PV Meter"**
-4. Clique sur **Télécharger**
-5. Redémarre Home Assistant
-6. Va dans **Paramètres** → **Appareils et services** → **Ajouter une intégration**
-7. Cherche **"Smart PV Meter"** et configure
+1. **Arrêter Home Assistant** (optionnel mais recommandé)
+   ```bash
+   ha core stop
+   ```
 
-### Installation manuelle
+2. **Naviguer vers le répertoire des custom components**
+   ```bash
+   cd /config/custom_components/spvm/
+   ```
 
-1. Télécharge la dernière release depuis [GitHub](https://github.com/GevaudanBeast/smart-pv-meter/releases)
-2. Copie le dossier `custom_components/spvm` dans ton dossier `config/custom_components/`
-3. Redémarre Home Assistant
-4. Ajoute l'intégration via l'interface
+3. **Sauvegarder l'ancienne version** (au cas où)
+   ```bash
+   cp -r ../spvm ../spvm.backup.0.5.5
+   ```
 
----
+4. **Télécharger les fichiers corrigés depuis GitHub**
+   ```bash
+   # Si git est disponible
+   git pull origin main
+   
+   # OU télécharger manuellement les fichiers suivants et les remplacer :
+   # - config_flow.py
+   # - const.py
+   # - const_old.py
+   # - en.json
+   # - __init__.py
+   # - manifest.json
+   ```
 
-## ⚙️ Configuration
+5. **Vérifier la version**
+   ```bash
+   cat manifest.json | grep version
+   # Doit afficher : "version": "0.5.8"
+   ```
 
-### Capteurs requis
-- **Capteur de production PV** (puissance en W ou kW)
-- **Capteur de consommation maison** (puissance en W)
+6. **Valider l'encodage** (optionnel)
+   ```bash
+   python3 validate_encoding.py
+   # Doit afficher : ✅ Aucun problème d'encodage détecté!
+   ```
 
-### Capteurs optionnels
-- **Capteur de puissance réseau** (import/export)
-- **Capteur de batterie** (charge/décharge)
-- **Capteur de luminosité** (lux) - recommandé pour k-NN
-- **Capteur de température** - recommandé pour k-NN
-- **Capteur d'humidité** - optionnel pour k-NN
+7. **Redémarrer Home Assistant**
+   ```bash
+   ha core restart
+   ```
 
-### Paramètres système
-- **Réserve batterie** : 150W par défaut (Zendure)
-- **Cap maximum** : 3000W (limite onduleur)
-- **Dégradation panneaux** : 0% par défaut
-- **Unités** : W ou kW, °C ou °F
+### Option 2 : Via HACS (dès que la version sera publiée)
 
-### Paramètres k-NN
-- **k voisins** : 5 par défaut
-- **Fenêtre temporelle** : 30-90 minutes
-- **Poids** : Luminosité (0.4), Température (0.2), Humidité (0.1), Élévation (0.3)
-- **Historique** : 7 jours par défaut (optimisé pour démarrage rapide)
-
----
-
-## 📊 Entités créées
-
-| Entité | Description | Usage |
-|--------|-------------|-------|
-| `sensor.spvm_surplus_net` | **Surplus net final** (avec réserve et cap) | ⭐ **Pour Solar Optimizer** |
-| `sensor.spvm_surplus_net_raw` | Surplus brut (avant lissage) | Diagnostic |
-| `sensor.spvm_surplus_virtual` | Surplus virtuel calculé | Diagnostic |
-| `sensor.spvm_grid_power_auto` | Puissance réseau auto-calculée | Diagnostic |
-| `sensor.spvm_pv_effective_cap_now_w` | Capacité PV effective | Info |
-| `sensor.spvm_expected_similar` | Production attendue (k-NN) | Prédiction |
-
-### 🎯 Capteur principal pour Solar Optimizer
-
-**Utilise `sensor.spvm_surplus_net`** - Il inclut déjà :
-- ✅ Réserve Zendure (150W)
-- ✅ Cap système (3000W)
-- ✅ Lissage temporel
-- ✅ Calcul temps réel parfait
+1. Ouvrir **HACS** dans Home Assistant
+2. Aller dans **Intégrations**
+3. Rechercher **SPVM - Smart PV Meter**
+4. Cliquer sur **Mettre à jour**
+5. Redémarrer Home Assistant
 
 ---
 
-## 🔧 Services disponibles
+## ✅ Vérification post-installation
 
-### `spvm.recompute_expected_now`
-Force un recalcul immédiat de la production attendue
+### 1. Vérifier les logs
 
-### `spvm.reset_cache`
-Vide le cache historique et force un rechargement des données
+Accéder aux logs Home Assistant :
+```
+Paramètres → Système → Journaux
+```
 
----
+Rechercher `spvm` - vous devriez voir :
+```
+2025-11-11 18:00:00.123 INFO (SyncWorker_1) [homeassistant.loader] Loaded spvm from custom_components.spvm
+2025-11-11 18:00:00.456 INFO (MainThread) [custom_components.spvm] SPVM async_setup_entry (version=0.5.8, entry_id=...)
+```
 
-## 📈 Changelog v0.5.7
+**Aucune erreur ne devrait apparaître.**
 
-### 🚀 Améliorations
-- **Démarrage ultra-rapide** : `HISTORY_DAYS` réduit à 7 jours par défaut
-- **Gestion propre de HISTORY_DAYS=0** : Désactivation complète possible
-- **Logs nettoyés** : Suppression des logs de debug, logs INFO clairs
-- **Performance optimisée** : Cache intelligent, moins de requêtes DB
+### 2. Tester l'interface de configuration
 
-### 🐛 Corrections
-- **Fix timeout au démarrage** : Sur systèmes avec large base de données (2M+ états)
-- **Fix chargement historique** : Ne bloque plus le démarrage de Home Assistant
-- **Fix logs** : Messages clairs sur l'état du chargement d'historique
+1. Aller dans **Paramètres** → **Appareils et services**
+2. Chercher **SPVM - Smart PV Meter**
+3. Cliquer sur **Configurer** (ou **Ajouter une intégration** si nouvelle installation)
 
-### 🔄 Changements techniques
-- `HISTORY_DAYS` : 1095 jours → 7 jours (configurable)
-- Chargement historique non-bloquant si HISTORY_DAYS=0
-- Messages utilisateur améliorés
+**L'interface devrait s'afficher correctement sans erreur 500.**
 
-### ⚠️ Breaking Changes
-Aucun - Migration automatique depuis 0.5.6
+### 3. Vérifier les entités créées
 
----
+Les entités suivantes devraient être disponibles :
 
-## 🚨 Migration depuis 0.5.6
+```
+✅ sensor.spvm_grid_power_auto
+✅ sensor.spvm_surplus_virtual
+✅ sensor.spvm_surplus_net_raw
+✅ sensor.spvm_surplus_net          ← À utiliser pour Solar Optimizer
+✅ sensor.spvm_pv_effective_cap_now_w
+✅ sensor.spvm_expected_similar
+✅ sensor.spvm_expected_debug       ← Si debug activé
+```
 
-### Automatique
-La migration est **automatique** - aucune action requise.
+### 4. Vérifier le fonctionnement
 
-### Changements de comportement
-- **Production attendue** : Basée sur 7 jours au lieu de 3 ans
-  - Plus rapide au démarrage
-  - Toujours précise pour prédictions journalières
-  - Peut être augmenté dans les options si besoin
-
-### Si démarrage lent
-Si tu as une grosse base de données (>2M états) et que le démarrage est lent :
-
-1. Édite `/config/custom_components/spvm/const.py`
-2. Change `HISTORY_DAYS: Final = 0` (désactive complètement)
-3. Redémarre Home Assistant
-4. Les calculs temps réel fonctionnent parfaitement
-5. Seule `sensor.spvm_expected_similar` affichera 0.0 kW
-
----
-
-## 🎓 Exemples d'utilisation
-
-### Avec Solar Optimizer
+Dans **Outils de développement** → **États**, chercher `sensor.spvm_surplus_net` :
 
 ```yaml
-# configuration.yaml
-solar_optimizer:
-  surplus_sensor: sensor.spvm_surplus_net
-  # SPVM gère déjà la réserve et le cap !
-```
-
-### Automation basique
-
-```yaml
-automation:
-  - alias: "Démarrer chauffe-eau sur surplus"
-    trigger:
-      - platform: numeric_state
-        entity_id: sensor.spvm_surplus_net
-        above: 2000  # 2kW de surplus
-        for: "00:05:00"  # Pendant 5 minutes
-    action:
-      - service: switch.turn_on
-        target:
-          entity_id: switch.chauffe_eau
+state: 1234.5  # Exemple de valeur en watts
+attributes:
+  source: "surplus_virtual - reserve_w (capped)"
+  reserve_w: 150
+  cap_max_w: 3000
+  cap_limit_w: 3000
+  smoothed: true
+  window_s: 45
+  note: "Zendure reserve applied; System cap applied; 3 kW hard limit applied"
 ```
 
 ---
 
-## 🔍 Diagnostic
+## 🔧 Configuration recommandée
 
-### Logs utiles
-```bash
-# Voir les logs SPVM
-ha core logs | grep "custom_components.spvm"
+### Paramètres de base
 
-# Voir le chargement d'historique
-ha core logs | grep "Fetching.*days"
-
-# Voir les erreurs
-ha core logs | grep -E "(ERROR|WARNING)" | grep spvm
+```yaml
+Configuration minimale :
+- PV sensor: sensor.inverter_power
+- House sensor: sensor.house_consumption
+- Reserve W: 150  # Pour Zendure
+- Cap max W: 3000  # Limite de l'installation
 ```
 
-### Vérifier les valeurs
-```bash
-# Lister toutes les entités SPVM
-ha states list | grep spvm
+### Paramètres k-NN (prédiction)
+
+Pour une prédiction optimale, configurer :
+
+```yaml
+Capteurs météo (optionnels mais recommandés) :
+- Lux sensor: sensor.outdoor_lux
+- Temperature sensor: sensor.outdoor_temp
+- Humidity sensor: sensor.outdoor_humidity
+
+Paramètres k-NN :
+- k: 5 (nombre de voisins)
+- Window min: 30 minutes
+- Window max: 90 minutes
+- Weight lux: 0.4
+- Weight temp: 0.2
+- Weight hum: 0.1
+- Weight elevation: 0.3
 ```
 
-### Performance
-- **Démarrage attendu** : < 5 secondes avec HISTORY_DAYS=7
-- **Utilisation mémoire** : ~50-100 Mo selon historique
-- **CPU** : Négligeable en fonctionnement normal
+### Intégration avec Solar Optimizer
+
+Dans votre configuration Solar Optimizer, utiliser :
+
+```yaml
+surplus_sensor: sensor.spvm_surplus_net
+```
+
+**Important** : `sensor.spvm_surplus_net` inclut déjà :
+- ✅ La réserve Zendure de 150W
+- ✅ Le cap de 3kW
+- ✅ Le lissage temporel
+
+---
+
+## 🐛 Dépannage
+
+### Erreur "Config flow could not be loaded"
+
+**Solution** : Vérifier que tous les fichiers sont bien encodés en UTF-8.
+
+```bash
+# Exécuter le script de validation
+python3 validate_encoding.py /config/custom_components/spvm/
+
+# Résultat attendu :
+# ✅ Aucun problème d'encodage détecté!
+```
+
+### Les entités n'apparaissent pas
+
+1. Vérifier que l'intégration est bien chargée :
+   ```
+   Paramètres → Appareils et services → SPVM
+   ```
+
+2. Recharger l'intégration :
+   ```
+   Dans SPVM → ⋮ → Recharger
+   ```
+
+3. Si ça ne fonctionne pas, supprimer et reconfigurer :
+   ```
+   SPVM → ⋮ → Supprimer l'intégration
+   Puis : Ajouter une intégration → SPVM
+   ```
+
+### Valeurs incorrectes dans sensor.spvm_surplus_net
+
+Vérifier que :
+- Les capteurs sources (PV, house, grid, battery) sont bien configurés
+- Les unités sont correctes (W ou kW)
+- Le paramètre `reserve_w` est bien à 150W pour Zendure
+- Le paramètre `cap_max_w` ne dépasse pas 3000W
+
+### Prédiction k-NN non fonctionnelle
+
+1. Vérifier qu'il y a des données historiques :
+   ```yaml
+   sensor.spvm_expected_similar:
+     samples_total: 0  ← Problème !
+   ```
+
+2. Attendre quelques jours pour accumuler les données
+
+3. Vérifier que les capteurs météo sont bien configurés
+
+4. Forcer un recalcul :
+   ```yaml
+   service: spvm.recompute_expected_now
+   ```
+
+---
+
+## 📞 Support
+
+### Problèmes connus de cette version
+
+✅ Erreur 500 du config flow → **CORRIGÉ**
+
+### Rapporter un bug
+
+Si vous rencontrez un problème :
+
+1. **Activer le debug** dans `configuration.yaml` :
+   ```yaml
+   logger:
+     default: info
+     logs:
+       custom_components.spvm: debug
+   ```
+
+2. **Collecter les diagnostics** :
+   ```
+   Paramètres → Appareils et services → SPVM
+   → ⋮ → Télécharger les diagnostics
+   ```
+
+3. **Créer une issue sur GitHub** :
+   https://github.com/GevaudanBeast/smart-pv-meter/issues
+
+   Inclure :
+   - Version de Home Assistant
+   - Version de SPVM
+   - Logs pertinents
+   - Fichier de diagnostics
+
+---
+
+## 🎯 Prochaines étapes
+
+Après validation du fonctionnement :
+
+1. ✅ Intégrer avec Solar Optimizer
+2. ✅ Surveiller les valeurs pendant 24-48h
+3. ✅ Ajuster les paramètres si nécessaire
+4. ✅ Activer les capteurs météo pour améliorer les prédictions
 
 ---
 
 ## 📚 Documentation complète
 
-Consulte le [Wiki GitHub](https://github.com/GevaudanBeast/smart-pv-meter/wiki) pour :
-- Guide de configuration détaillé
-- Explications des algorithmes k-NN
-- Exemples d'automations avancées
-- FAQ et troubleshooting
+- **GitHub** : https://github.com/GevaudanBeast/smart-pv-meter
+- **Wiki** : https://github.com/GevaudanBeast/smart-pv-meter/wiki
+- **Issues** : https://github.com/GevaudanBeast/smart-pv-meter/issues
 
 ---
 
-## 🤝 Contribution
-
-Les contributions sont les bienvenues !
-
-1. Fork le projet
-2. Crée une branche (`git checkout -b feature/AmazingFeature`)
-3. Commit tes changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvre une Pull Request
-
----
-
-## 🐛 Bugs et suggestions
-
-Ouvre une issue sur [GitHub](https://github.com/GevaudanBeast/smart-pv-meter/issues)
-
----
-
-## 📜 Licence
-
-Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
----
-
-## 💡 Crédits
-
-Développé par [@GevaudanBeast](https://github.com/GevaudanBeast)
-
-Inspiré par les besoins de la communauté Home Assistant française pour l'optimisation solaire.
-
----
-
-## ⭐ Support
-
-Si ce projet t'aide, n'hésite pas à mettre une étoile sur GitHub ! ⭐
+**Version** : 0.5.8  
+**Date de sortie** : 11 novembre 2025  
+**Urgence** : 🔴 CRITIQUE  
+**Auteur** : GevaudanBeast
