@@ -1,172 +1,120 @@
-# Changelog
+# SPVM Changelog - Version 0.5.8
 
-Toutes les modifications notables de ce projet seront documentées dans ce fichier.
+## Corrections critiques (Bug fixes)
 
-Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
-et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
+### Erreur 500 - Config Flow Fix
+**Problème**: L'interface de configuration retournait une erreur 500 empêchant la configuration de l'intégration.
 
----
+**Cause racine**: Problèmes d'encodage UTF-8 des caractères spéciaux dans plusieurs fichiers Python :
+- `Â°C` et `Â°F` mal encodés dans les sélecteurs d'unités de température
+- Caractères spéciaux (`→`, `•`) mal encodés dans les messages et commentaires
 
-## [0.5.7] - 2025-11-11
+**Fichiers corrigés**:
+1. **config_flow.py**
+   - Ligne 282-283: Correction encodage `°C` et `°F` dans `SelectOptionDict`
+   - Lignes 301-306: Correction caractères bullet points `•`
 
-### 🚀 Améliorations
+2. **const.py**
+   - Ligne 49: `DEF_UNIT_TEMP` corrigé de `"Â°C"` vers `"°C"`
+   - Lignes 92-93: `UNIT_C` et `UNIT_F` corrigés
 
-#### Performance et démarrage
-- **Démarrage ultra-rapide** : HISTORY_DAYS réduit de 1095 jours à 7 jours par défaut
-  - Temps de setup réduit de 30-60s à <5s sur systèmes avec grosse base de données
-  - Toujours précis pour prédictions journalières
-  - Configurable dans const.py si besoin de plus d'historique
-- **Gestion propre de HISTORY_DAYS=0** : Possibilité de désactiver complètement l'historique
-  - Setup instantané (<0.01s)
-  - Tous les calculs temps réel fonctionnent parfaitement
-  - Seule la prédiction k-NN est désactivée
+3. **const_old.py** (pour cohérence)
+   - Ligne 49: Correction similaire
+   - Lignes 92-93: Correction similaire
 
-#### Logs et diagnostic
-- **Logs nettoyés et clairs** :
-  - Suppression des logs de timing debug (⏱️)
-  - Messages INFO clairs sur l'état du chargement
-  - Meilleure visibilité des opérations importantes
-- **Messages utilisateur améliorés** :
-  - "Fetching X days of historical data..."
-  - "Loaded Y historical data points from X days"
-  - "Historical data loading disabled (HISTORY_DAYS=0)"
+4. **en.json**
+   - Ligne 20: Correction de la description d'unité de température
 
-### 🐛 Corrections
+5. **__init__.py**
+   - Ligne 72: Message de log nettoyé (caractère flèche)
 
-#### Startup et stabilité
-- **Fix timeout au démarrage** ([#XX](https://github.com/GevaudanBeast/smart-pv-meter/issues/XX))
-  - Sur systèmes avec base de données volumineuse (2M+ états)
-  - Home Assistant ne redémarre plus pendant le setup SPVM
-  - Chargement historique optimisé pour ne pas bloquer
-- **Fix chargement historique bloquant** :
-  - Le chargement ne bloque plus `async_config_entry_first_refresh`
-  - Gestion gracieuse des erreurs de base de données
-  - Cache intelligent pour éviter rechargements inutiles
+6. **manifest.json**
+   - Version mise à jour de 0.5.5 → 0.5.8
 
-### 🔄 Changements techniques
+## Impact utilisateur
 
-#### Code
-- `const.py` :
-  - `HISTORY_DAYS: Final = 7` (était 1095)
-  - `INTEGRATION_VERSION: Final = "0.5.7"`
-- `expected.py` :
-  - Détection et gestion de `HISTORY_DAYS == 0`
-  - Logs de chargement simplifiés
-  - Pas de `import time` si pas de timing
-- `__init__.py` :
-  - Logs de setup nettoyés
-  - Message INFO de completion
-  - Pas de logs WARNING de timing
-
-#### Base de données
-- Optimisation des requêtes historiques
-- Cache valide pendant 1h au lieu de recharger
-- Meilleure gestion mémoire sur gros volumes
-
-### ⚠️ Breaking Changes
-
-**Aucun** - Migration automatique depuis 0.5.6
-
-### 📝 Notes de migration
-
-#### Depuis 0.5.6
-- **Automatique** : Aucune action requise
-- **Comportement** : Production attendue basée sur 7 jours au lieu de 3 ans
-- **Performance** : Démarrage beaucoup plus rapide
-
-#### Pour augmenter HISTORY_DAYS
-Si tu veux plus de 7 jours d'historique :
-```python
-# custom_components/spvm/const.py (ligne ~141)
-HISTORY_DAYS: Final = 30  # ou 60, 90, etc.
+### Avant la correction
+```
+Erreur: Le flux de configuration n'a pas pu être chargé: 500 Internal Server Error
+Server got itself in trouble
 ```
 
-#### Pour désactiver complètement
-Si démarrage encore trop lent :
-```python
-# custom_components/spvm/const.py (ligne ~141)
-HISTORY_DAYS: Final = 0  # Désactive l'historique
+### Après la correction
+✅ L'interface de configuration charge correctement  
+✅ Tous les sélecteurs d'options fonctionnent  
+✅ Les unités de température s'affichent correctement (`°C` / `°F`)
+
+## Instructions de mise à jour
+
+### Pour Home Assistant
+
+1. **Arrêter Home Assistant** (ou au moins l'intégration SPVM)
+
+2. **Remplacer les fichiers** dans `/config/custom_components/spvm/`:
+   - `config_flow.py`
+   - `const.py`
+   - `const_old.py`
+   - `en.json`
+   - `__init__.py`
+   - `manifest.json`
+
+3. **Redémarrer Home Assistant**
+
+4. **Reconfigurer l'intégration** :
+   - Aller dans Paramètres → Appareils et services
+   - Cliquer sur "SPVM - Smart PV Meter"
+   - Cliquer sur "Configurer"
+   - L'interface devrait maintenant fonctionner correctement
+
+### Via HACS
+
+Si vous utilisez HACS, attendez que la version 0.5.8 soit publiée sur GitHub, puis :
+1. HACS → Intégrations
+2. SPVM - Smart PV Meter → Mettre à jour
+3. Redémarrer Home Assistant
+
+## Validation
+
+Pour vérifier que la correction fonctionne :
+
+```bash
+# Vérifier l'encodage des fichiers
+grep -r "Â°" /config/custom_components/spvm/
+# Résultat attendu : aucune correspondance
+
+# Vérifier la version
+cat /config/custom_components/spvm/manifest.json | grep version
+# Résultat attendu : "version": "0.5.8"
 ```
 
----
+## Notes techniques
 
-## [0.5.6] - 2025-11-10
+### Pourquoi ce problème ?
 
-### 🚀 Améliorations
-- Migration complète de Node-RED vers Python natif
-- Implémentation k-NN pour prédiction de production
-- Support bilingue complet (français/anglais)
-- Interface de configuration UI complète
-- Diagnostics complets pour troubleshooting
+Les fichiers Python ont été créés ou édités avec un éditeur qui a mal interprété l'encodage UTF-8, transformant les caractères spéciaux en séquences multi-bytes incorrectes :
+- `°` (U+00B0) → `Â°` (mauvaise interprétation ISO-8859-1)
+- `→` (U+2192) → `Ã¢â€ â€™` (corruption multi-byte)
 
-### ✨ Nouveautés
-- Algorithme k-NN avec pondération configurable
-- Lissage temporel pour surplus_net
-- Cache intelligent des données historiques
-- Services SPVM pour contrôle manuel
-- Support complet HACS
+### Solution appliquée
 
-### 🔧 Technique
-- 9 fichiers Python, 1600+ lignes de code
-- DataUpdateCoordinator pour gestion des données
-- Config flow et options flow complets
-- Tests unitaires et CI/CD GitHub Actions
+Remplacement de tous les caractères mal encodés par leurs équivalents UTF-8 corrects, en utilisant un script Python pour garantir la cohérence.
 
----
+## Compatibilité
 
-## [0.5.0] - 2025-11-08
+- Home Assistant 2024.1+
+- Python 3.11+
+- Pas de changement dans la structure des données
+- Pas de migration nécessaire depuis 0.5.x
 
-### 🎉 Release initiale Python
-- Première version native Home Assistant
-- Remplacement de la solution Node-RED
-- Calculs de surplus en temps réel
-- Intégration avec Solar Optimizer
+## Prochaines étapes
 
-### Fonctionnalités
-- Calcul grid_power_auto
-- Calcul surplus_virtual
-- Calcul surplus_net avec réserve et cap
-- Capacité PV effective avec dégradation
-- Prédiction basique de production
+Version 0.5.9 (planifiée) :
+- [ ] Ajout de tests unitaires pour éviter les régressions d'encodage
+- [ ] Validation automatique de l'encodage UTF-8 dans le pipeline CI/CD
+- [ ] Documentation améliorée sur les standards d'encodage
 
 ---
 
-## [0.4.x] - 2025-10 et antérieur
-
-### Anciennes versions Node-RED
-- Solutions basées sur Node-RED
-- Calculs de surplus basiques
-- Configuration manuelle
-- Pas de prédiction
-
----
-
-## Légende des symboles
-
-- 🚀 **Améliorations** : Nouvelles fonctionnalités ou améliorations
-- 🐛 **Corrections** : Bugs corrigés
-- 🔄 **Changements** : Modifications de comportement
-- ⚠️ **Breaking** : Changements cassant la rétrocompatibilité
-- 📝 **Documentation** : Améliorations de documentation
-- 🔧 **Technique** : Changements techniques internes
-- ✨ **Nouveautés** : Fonctionnalités entièrement nouvelles
-- 🎉 **Releases** : Versions majeures
-
----
-
-## Versions à venir
-
-### [0.6.0] - Roadmap
-- Chargement différé de l'historique (arrière-plan)
-- Chargement progressif (7j → 14j → 30j)
-- Option UI pour HISTORY_DAYS (sans éditer le code)
-- Cache multi-niveaux pour performance
-- Prédictions météo intégrées
-- Export des données pour analyse
-
-### [1.0.0] - Vision long terme
-- API REST pour intégrations externes
-- Dashboard intégré
-- Mode apprentissage avancé
-- Support multi-onduleurs
-- Prédictions ML avancées
+**Date de sortie**: 11 novembre 2025  
+**Urgence**: 🔴 CRITIQUE - Bloque la configuration de l'intégration  
+**Auteur**: GevaudanBeast
