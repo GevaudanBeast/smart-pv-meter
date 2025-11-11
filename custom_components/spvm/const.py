@@ -8,7 +8,7 @@ DOMAIN: Final = "spvm"
 NAME: Final = "Smart PV Meter"
 MANUFACTURER: Final = "GevaudanBeast"
 ISSUE_URL: Final = "https://github.com/GevaudanBeast/smart-pv-meter/issues"
-INTEGRATION_VERSION: Final = "0.5.7"
+INTEGRATION_VERSION: Final = "0.5.0"
 
 # ========== Configuration keys ==========
 # Entity selectors
@@ -40,16 +40,13 @@ CONF_KNN_WEIGHT_ELEV: Final = "knn_weight_elev"
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 CONF_SMOOTHING_WINDOW: Final = "smoothing_window"
 
-# History
-CONF_ENABLE_HISTORY: Final = "enable_history"
-
 # Debug
 CONF_DEBUG_EXPECTED: Final = "debug_expected"
 
 # ========== Default values ==========
 DEF_RESERVE_W: Final = 150
 DEF_UNIT_POWER: Final = "W"
-DEF_UNIT_TEMP: Final = "Â°C"
+DEF_UNIT_TEMP: Final = "°C"
 DEF_CAP_MAX_W: Final = 3000
 DEF_DEGRADATION_PCT: Final = 0.0
 DEF_CAP_LIMIT_W: Final = 3000  # Hard limit
@@ -65,7 +62,6 @@ DEF_KNN_WEIGHT_ELEV: Final = 0.3
 
 DEF_UPDATE_INTERVAL: Final = 60  # seconds
 DEF_SMOOTHING_WINDOW: Final = 45  # seconds
-DEF_ENABLE_HISTORY: Final = True  # Enable by default
 DEF_DEBUG_EXPECTED: Final = False
 
 # Config entry version
@@ -93,8 +89,8 @@ L_EXPECTED_DEBUG: Final = "SPVM - Expected Debug Info"
 # ========== Units ==========
 UNIT_W: Final = "W"
 UNIT_KW: Final = "kW"
-UNIT_C: Final = "Â°C"
-UNIT_F: Final = "Â°F"
+UNIT_C: Final = "°C"
+UNIT_F: Final = "°F"
 KW_TO_W: Final = 1000.0
 
 # ========== Attributes ==========
@@ -142,5 +138,5 @@ NOTE_CAP_LIMIT: Final = "3 kW hard limit applied"
 NOTE_HARD_CAP: Final = "3 kW hard limit applied"
 
 # ========== History & timezone ==========
-HISTORY_DAYS: Final = 7  # Start with 7 days for fast startup (can be increased to 30-90)
+HISTORY_DAYS: Final = 1095  # 3 years for better seasonal comparison
 TIMEZONE: Final = "Europe/Paris"
