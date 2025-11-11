@@ -1,214 +1,225 @@
-# SPVM 0.5.6 - Performance & Stability Release
+# 🌞 Smart PV Meter (SPVM)
 
-## 🎯 What's Fixed
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/release/GevaudanBeast/smart-pv-meter.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![License](https://img.shields.io/github/license/GevaudanBeast/smart-pv-meter.svg)](LICENSE)
 
-This release resolves critical performance issues that affected installation and startup times.
+**Smart PV Meter** est une intégration Home Assistant qui calcule votre surplus solaire en temps réel avec prédiction intelligente de la production photovoltaïque via algorithme k-NN.
 
-### Critical Fixes ✅
-- **Blocking I/O calls eliminated**: Removed pytz dependency causing "Detected blocking call to open" warnings
-- **Timeout issues resolved**: Fixed CancelledError during integration setup
-- **10x faster installation**: Setup time reduced from 3-5 minutes to < 30 seconds
+## ✨ Caractéristiques principales
 
-## ✨ New Features
+- 🔋 **Calcul automatique du surplus net** - Prêt pour Solar Optimizer
+- 🤖 **Prédiction k-NN** - Basée sur 3 ans d'historique et conditions météo
+- 📊 **6 capteurs dédiés** - Grid power, surplus virtual/raw/net, capacité effective, prédiction
+- ⚙️ **Configuration intuitive** - Via interface graphique Home Assistant
+- 🔄 **Mise à jour temps réel** - Intervalle configurable (défaut: 60s)
+- 🌐 **Multilingue** - Français et Anglais
 
-### Progressive History Loading
-New service `spvm.extend_history` allows users to load historical data incrementally:
+## 📦 Version actuelle : 0.5.6b (Patch de stabilité)
+
+### 🔧 Correctifs critiques
+
+Cette version corrige les problèmes de redémarrages en boucle :
+
+- ✅ **Blocage event loop** - Remplacement pytz par dt_util
+- ✅ **Timeout au setup** - Timeout de 120s avec continuation en background
+- ✅ **Timeout requêtes SQL** - Timeout de 90s avec fallback théorique
+- ✅ **Gestion timezone** - Fallbacks robustes
+- ✅ **Attributs privés** - Propriétés publiques pour diagnostics
+
+[📝 Voir le CHANGELOG complet](CHANGELOG.md)
+
+## 🚀 Installation
+
+### Via HACS (recommandé)
+
+1. Ouvrir HACS dans Home Assistant
+2. Aller dans "Intégrations"
+3. Cliquer sur "⋮" (menu) → "Dépôts personnalisés"
+4. Ajouter l'URL : `https://github.com/GevaudanBeast/smart-pv-meter`
+5. Catégorie : "Intégration"
+6. Chercher "Smart PV Meter"
+7. Cliquer sur "Télécharger"
+8. Redémarrer Home Assistant
+
+### Installation manuelle
+
+1. Télécharger la dernière version depuis [Releases](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+2. Extraire le contenu dans `custom_components/spvm/`
+3. Redémarrer Home Assistant
+
+## ⚙️ Configuration
+
+### 1. Ajouter l'intégration
+
+**Paramètres** → **Appareils et services** → **Ajouter une intégration** → Chercher "**Smart PV Meter**"
+
+### 2. Capteurs requis
+
+| Capteur | Description | Exemple |
+|---------|-------------|---------|
+| **Production PV** | Puissance produite par les panneaux | `sensor.pv_power` |
+| **Consommation maison** | Puissance consommée par la maison | `sensor.house_power` |
+
+### 3. Capteurs optionnels
+
+| Capteur | Description | Utilité |
+|---------|-------------|---------|
+| **Puissance réseau** | Import/export réseau | Calcul surplus précis |
+| **Puissance batterie** | Charge/décharge batterie | Prise en compte batterie |
+| **Luminosité** | Capteur lux | ⭐ k-NN précis |
+| **Température** | Température extérieure | ⭐ k-NN précis |
+| **Humidité** | Humidité relative | k-NN amélioré |
+
+### 4. Paramètres système
+
+| Paramètre | Défaut | Description |
+|-----------|--------|-------------|
+| **Réserve batterie** | 150 W | Réserve Zendure permanente |
+| **Cap système** | 3000 W | Limite onduleur (hard cap à 3kW) |
+| **Dégradation panneaux** | 0 % | Usure des panneaux solaires |
+
+## 📊 Entités créées
+
+L'intégration crée automatiquement 6 capteurs :
+
+### Capteurs principaux
+
+**`sensor.spvm_surplus_net`** ⭐  
+→ **Surplus net final** - À utiliser avec Solar Optimizer  
+→ Inclut réserve 150W et cap 3kW, lissé sur 45s
+
+**`sensor.spvm_expected_similar`**  
+→ **Production attendue** via k-NN (kW)  
+→ Basée sur historique 3 ans + conditions actuelles
+
+### Capteurs intermédiaires
+
+- `sensor.spvm_grid_power_auto` - Puissance réseau calculée
+- `sensor.spvm_surplus_virtual` - Surplus brut (avant réserve)
+- `sensor.spvm_surplus_net_raw` - Surplus après réserve (avant lissage)
+- `sensor.spvm_pv_effective_cap_now_w` - Capacité effective avec dégradation
+
+## 🎯 Utilisation avec Solar Optimizer
+
 ```yaml
-service: spvm.extend_history
-data:
-  days: 90  # Load 90 days of history
+# configuration.yaml
+solar_optimizer:
+  surplus_sensor: sensor.spvm_surplus_net  # ⭐ Utiliser ce capteur
+  # La réserve Zendure (150W) et le cap (3kW) sont déjà appliqués
 ```
 
-**Benefits:**
-- Fast initial setup (7 days only)
-- Load more data on-demand
-- No more timeouts or blocking
+## 🔧 Services disponibles
 
-### Smart Caching
-- 1-hour cache reduces database queries
-- Better memory management
-- Improved overall performance
+### `spvm.recompute_expected_now`
 
-## 🔄 Breaking Changes
+Force un recalcul immédiat de la production attendue.
 
-### Default History Reduced
-- **Before**: 1095 days (3 years) loaded at startup
-- **After**: 30 days default, 7 days first load
-- **Migration**: Use `extend_history` service to load more
-
-**Why?** Fast startup is more important than having 3 years immediately. Users can progressively load more data as needed.
-
-## 📊 Performance Improvements
-
-| Metric | v0.5.5 | v0.5.6 | Improvement |
-|--------|--------|--------|-------------|
-| Installation time | 3-5 min | < 30 sec | **10x faster** |
-| Blocking calls | Yes | No | **100% eliminated** |
-| Default history | 1095 days | 30 days | **Better balance** |
-| First load | 1095 days | 7 days | **156x less data** |
-| Timeout risk | High | None | **Stable** |
-
-## 🔧 Technical Changes
-
-### Code Modifications
-- `expected.py`: Replaced pytz with Home Assistant's dt_util
-- `__init__.py`: Removed blocking `async_config_entry_first_refresh`
-- `const.py`: Changed HISTORY_DAYS from 1095 to 30
-- `coordinator.py`: Added `extend_history()` method
-- `services.yaml`: Added extend_history service definition
-
-### Architecture Improvements
-- Lazy loading: Historical data loads on-demand
-- Progressive loading: Start with 7 days, extend as needed
-- Better timezone handling: Using HA's native utilities
-
-## 📝 Migration Guide
-
-### For New Users
-Simply install and configure. No special steps needed!
-
-### For Existing Users (0.5.x → 0.5.6)
-
-#### Option 1: Clean Install (Recommended)
-1. Backup your configuration
-2. Remove SPVM integration via UI
-3. Delete `/config/custom_components/spvm/`
-4. Install v0.5.6
-5. Reconfigure with saved settings
-
-#### Option 2: In-Place Update
-1. Replace files in `/config/custom_components/spvm/`
-2. Restart Home Assistant
-3. Call `spvm.reset_cache` service
-4. Optionally call `spvm.extend_history` with 30+ days
-
-**Full migration guide included in package.**
-
-## ✅ Testing
-
-### Automated Tests
-Run the included test script:
-```bash
-chmod +x QUICK_TEST_COMMANDS.sh
-./QUICK_TEST_COMMANDS.sh
-```
-
-### Manual Verification
-1. Installation completes in < 1 minute
-2. No "blocking call" warnings in logs
-3. All 6 sensors created and functional
-4. Service `spvm.extend_history` available
-
-**Comprehensive test plan included in package.**
-
-## 📦 Package Contents
-
-### Integration Code
-- Complete Home Assistant integration
-- Version 0.5.6 in manifest.json
-- Bilingual support (EN/FR)
-
-### Documentation
-- **START_HERE.md** - Quick start guide
-- **README.md** - Complete user guide
-- **INSTALLATION.md** - Detailed install instructions
-- **CHANGELOG.md** - Version history
-- **SPVM_MIGRATION_GUIDE.md** - Migration steps
-- **SPVM_TEST_PLAN.md** - Testing procedures
-- **SPVM_FIXES_SUMMARY.md** - Technical details
-- **QUICK_TEST_COMMANDS.sh** - Validation script
-
-## 🚀 Quick Start
-
-### Installation
-```bash
-# Extract
-unzip spvm-0.5.6.zip
-
-# Copy to Home Assistant
-cp -r spvm-0.5.6/custom_components/spvm /config/custom_components/
-
-# Restart
-ha core restart
-```
-
-### Configuration
-1. Configuration → Integrations → + Add
-2. Search "Smart PV Meter"
-3. Configure sensors:
-   - **Required**: pv_sensor, house_sensor
-   - **Recommended**: lux_sensor, temp_sensor
-   - **Optional**: grid_power_sensor, battery_sensor
-
-### Validation
-```bash
-# Quick test
-cd spvm-0.5.6/
-./QUICK_TEST_COMMANDS.sh
-```
-
-## 🎯 Recommended Workflow
-
-### Day 0 (Installation)
-- Install and configure
-- Starts with 7 days of history
-- Complete in < 30 seconds
-
-### Day 1 (First Extension)
 ```yaml
-service: spvm.extend_history
-data:
-  days: 30
+service: spvm.recompute_expected_now
 ```
 
-### Day 7+ (Full History)
+### `spvm.reset_cache`
+
+Vide le cache historique et recharge les données.
+
 ```yaml
-service: spvm.extend_history
-data:
-  days: 90  # or 180, 365
+service: spvm.reset_cache
 ```
 
-## 🐛 Known Issues
+## 🐛 Debug et diagnostics
 
-None currently! 🎉
+### Activer le logging debug
 
-## 💬 Feedback
+```yaml
+# configuration.yaml
+logger:
+  default: info
+  logs:
+    custom_components.spvm: debug
+```
 
-Please report any issues:
-- GitHub Issues: https://github.com/GevaudanBeast/smart-pv-meter/issues
-- Include version (0.5.6), logs, and configuration
+### Télécharger les diagnostics
 
-## 📜 License
+**Paramètres** → **Appareils et services** → **Smart PV Meter** → **⋮** → **Télécharger les diagnostics**
 
-This project is open source under the same license as previous versions.
+### Vérifier les logs
+
+```bash
+tail -f /config/home-assistant.log | grep -i spvm
+```
+
+Chercher cette séquence au démarrage :
+```
+SPVM setup starting (version=0.5.6b)
+Creating coordinator...
+Fetching initial data...
+SPVM setup COMPLETED successfully
+```
+
+## 📈 Comportement de la prédiction k-NN
+
+| Période | Méthode | Précision | Normal |
+|---------|---------|-----------|--------|
+| Jour 1-7 | `theoretical_capacity` | 40% | ✅ |
+| Jour 7-30 | `time_only_fallback` | 60-80% | ✅ |
+| Jour 30+ | `knn` | 85-95% | ✅ |
+| Nuit | `night_time` (0W) | 100% | ✅ |
+
+La précision s'améliore automatiquement au fil du temps avec l'accumulation de données historiques.
+
+## ⚡ Performance
+
+| Métrique | Première fois | Suivantes |
+|----------|---------------|-----------|
+| Setup initial | 30-120s | 2-5s |
+| Update coordinator | 5-15s | 0.5-2s |
+| Calcul k-NN | 3-10s | 0.5-1s |
+
+## 🔄 Migration depuis v0.5.5
+
+Aucune action requise, la v0.5.6b est 100% compatible.
+
+Simplement :
+1. Installer la nouvelle version via HACS
+2. Redémarrer Home Assistant
+3. Vérifier les logs
+
+## 🚧 Prochaines versions
+
+### v0.5.7 (Optimisations performance) - Prévue
+
+- Fenêtres saisonnières (±15j au lieu de 1095j)
+- Filtrage nuit basé sur luminosité (LUX)
+- Échantillonnage intelligent 5 minutes
+- Cache 24h au lieu de 1h
+
+**Gain attendu : -90% de données, 10x plus rapide**
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! N'hésitez pas à :
+
+- 🐛 Signaler des bugs via [Issues](https://github.com/GevaudanBeast/smart-pv-meter/issues)
+- 💡 Proposer des améliorations
+- 🌐 Aider à la traduction
+- 📝 Améliorer la documentation
+
+## 📝 Licence
+
+Ce projet est sous licence MIT. Voir [LICENSE](LICENSE) pour plus de détails.
+
+## 🙏 Remerciements
+
+- Home Assistant community
+- HACS pour la distribution
+- Tous les contributeurs et testeurs
+
+## 📞 Support
+
+- **Issues GitHub** : [smart-pv-meter/issues](https://github.com/GevaudanBeast/smart-pv-meter/issues)
+- **Discussions** : [smart-pv-meter/discussions](https://github.com/GevaudanBeast/smart-pv-meter/discussions)
 
 ---
 
-## 🙏 Credits
-
-Thanks to all users who reported the blocking call and timeout issues!
-
-## 🔗 Links
-
-- **Download**: spvm-0.5.6.zip (119KB)
-- **Repository**: https://github.com/GevaudanBeast/smart-pv-meter
-- **Documentation**: Included in package
-- **HACS**: Via custom repositories
-
----
-
-**Made with ☀️ for optimal solar energy management**
-
----
-
-## Installation Checklist
-
-After installing v0.5.6:
-- [ ] Installation completed in < 1 minute
-- [ ] No pytz warnings in logs
-- [ ] 6 sensors created and showing values
-- [ ] Service `spvm.extend_history` available
-- [ ] `sensor.spvm_surplus_net` working
-- [ ] k-NN predictions calculating (check `sensor.spvm_expected_similar`)
-
-**All checked?** You're ready to go! 🚀
+**Développé avec ❤️ par @GevaudanBeast**
