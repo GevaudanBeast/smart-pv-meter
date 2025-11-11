@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version (ex: 0.5.1)"
+        description: "Version (ex: 0.5.1 ou 0.5.6b)"
         required: true
         type: string
       prerelease:
@@ -37,8 +37,9 @@ jobs:
         run: |
           set -e
           VERSION="${{ inputs.version }}"
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Version invalide: $VERSION (attendu: X.Y.Z)"
+          # Accepte X.Y.Z ou X.Y.Zsuffixe (ex: 0.5.6b, 0.5.1-alpha, 0.5.2rc1)
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9._-]*$ ]]; then
+            echo "Version invalide: $VERSION (attendu: X.Y.Z ou X.Y.Zsuffixe)"
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -116,7 +117,7 @@ jobs:
           git push -f origin "v${VERSION}"
 
       # ===== CORRECTIF HACS: construire un ZIP dont la racine = CONTENU de spvm/ =====
-      - name: Construire l’archive ZIP pour HACS (contenu de spvm/)
+      - name: Construire l'archive ZIP pour HACS (contenu de spvm/)
         id: build_zip
         shell: bash
         run: |
