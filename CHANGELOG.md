@@ -1,6 +1,6 @@
 # Changelog - SPVM v0.5.6b
 
-## [0.5.6b] - 2024-11-11
+## [0.5.6b] - 2025-11-11
 
 ### 🔧 Correctifs critiques (Patch de stabilité)
 
