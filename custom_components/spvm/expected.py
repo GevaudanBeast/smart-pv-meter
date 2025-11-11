@@ -5,11 +5,13 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
+import pytz
+
 from homeassistant.components.recorder import get_instance, history
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import HISTORY_DAYS, KW_TO_W, UNIT_KW
+from .const import HISTORY_DAYS, KW_TO_W, TIMEZONE, UNIT_KW
 from .helpers import (
     calculate_distance,
     circular_distance,
@@ -29,6 +31,8 @@ class ExpectedProductionCalculator:
         self.hass = hass
         self.config = config
         self._cache: dict[str, Any] = {}
+        # Use dt_util instead of pytz to avoid blocking calls
+        self._timezone = None  # Will be set on first use
 
     async def async_calculate(self) -> dict[str, Any]:
         """Calculate expected production."""
@@ -40,17 +44,12 @@ class ExpectedProductionCalculator:
                 _LOGGER.warning("Cannot get current conditions")
                 return self._get_empty_result()
 
-            # Get historical data (returns [] if disabled or HISTORY_DAYS=0)
+            # Get historical data
             historical_data = await self._get_historical_data()
             
             if not historical_data:
-                if not self.config.get("enable_history", True):
-                    _LOGGER.info("Expected production disabled (history disabled by user)")
-                elif HISTORY_DAYS == 0:
-                    _LOGGER.info("Expected production disabled (HISTORY_DAYS=0)")
-                else:
-                    _LOGGER.warning("No historical data available")
-                return self._get_empty_result()
+                _LOGGER.warning("No historical data available")
+                return self._get_time_only_fallback(current)
 
             # Calculate k-NN
             result = self._calculate_knn(current, historical_data)
@@ -63,9 +62,11 @@ class ExpectedProductionCalculator:
 
     def _get_current_conditions(self) -> dict[str, Any] | None:
         """Get current weather and time conditions."""
-        # Use dt_util.now() which already handles timezone properly
-        # This avoids blocking call to pytz.timezone()
-        now = dt_util.now()
+        # Initialize timezone on first use to avoid blocking calls in __init__
+        if self._timezone is None:
+            self._timezone = pytz.timezone(TIMEZONE)
+        
+        now = dt_util.now(self._timezone)
         
         # Get sun elevation - make it optional
         sun_state = self.hass.states.get("sun.sun")
@@ -106,27 +107,14 @@ class ExpectedProductionCalculator:
 
     async def _get_historical_data(self) -> list[dict[str, Any]]:
         """Get historical data from recorder."""
-        # Check if history is enabled in config
-        if not self.config.get("enable_history", True):
-            _LOGGER.info("Historical data loading disabled by user configuration")
-            return []
-        
-        # If HISTORY_DAYS is 0, skip historical data loading entirely
-        if HISTORY_DAYS == 0:
-            _LOGGER.info("Historical data loading disabled (HISTORY_DAYS=0)")
-            return []
-        
         # Check cache
         if "historical_data" in self._cache:
             cache_time = self._cache.get("cache_time")
             if cache_time and (dt_util.now() - cache_time).seconds < 3600:
-                _LOGGER.debug("Using cached historical data (%d points)", len(self._cache["historical_data"]))
                 return self._cache["historical_data"]
 
         end_time = dt_util.now()
         start_time = end_time - timedelta(days=HISTORY_DAYS)
-        
-        _LOGGER.info("Fetching %d days of historical data...", HISTORY_DAYS)
 
         try:
             # Get PV history
@@ -196,8 +184,7 @@ class ExpectedProductionCalculator:
             self._cache["historical_data"] = data_points
             self._cache["cache_time"] = dt_util.now()
             
-            _LOGGER.info("Loaded %d historical data points from %d days", 
-                        len(data_points), HISTORY_DAYS)
+            _LOGGER.debug("Loaded %d historical data points", len(data_points))
             
             return data_points
 
@@ -235,8 +222,10 @@ class ExpectedProductionCalculator:
                 
                 # Get timestamp
                 timestamp = pv_state.last_changed
-                # dt_util.as_local handles timezone conversion properly
-                timestamp = dt_util.as_local(timestamp)
+                if timestamp.tzinfo is None:
+                    timestamp = self._timezone.localize(timestamp)
+                else:
+                    timestamp = timestamp.astimezone(self._timezone)
                 
                 # Create data point
                 point = {
