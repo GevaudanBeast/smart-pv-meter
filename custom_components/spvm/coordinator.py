@@ -11,6 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_ENABLE_HISTORY,
     CONF_HUM_SENSOR,
     CONF_KNN_K,
     CONF_KNN_WEIGHT_ELEV,
@@ -24,6 +25,7 @@ from .const import (
     CONF_TEMP_SENSOR,
     CONF_UNIT_POWER,
     CONF_UPDATE_INTERVAL,
+    DEF_ENABLE_HISTORY,
     DEF_KNN_K,
     DEF_KNN_WEIGHT_ELEV,
     DEF_KNN_WEIGHT_HUM,
@@ -98,6 +100,7 @@ class SPVMCoordinator(DataUpdateCoordinator):
             "temp_sensor": data.get(CONF_TEMP_SENSOR),
             "hum_sensor": data.get(CONF_HUM_SENSOR),
             "unit_power": data.get(CONF_UNIT_POWER, DEF_UNIT_POWER),
+            "enable_history": data.get(CONF_ENABLE_HISTORY, DEF_ENABLE_HISTORY),
             "k": data.get(CONF_KNN_K, DEF_KNN_K),
             "window_min": data.get(CONF_KNN_WINDOW_MIN, DEF_KNN_WINDOW_MIN),
             "window_max": data.get(CONF_KNN_WINDOW_MAX, DEF_KNN_WINDOW_MAX),
