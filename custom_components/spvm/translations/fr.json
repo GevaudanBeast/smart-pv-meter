@@ -27,6 +27,7 @@
           "knn_weight_elev": "k-NN : Poids élévation solaire",
           "update_interval_seconds": "Intervalle de mise à jour (secondes)",
           "smoothing_window_seconds": "Fenêtre de lissage pour surplus_net (secondes)",
+          "enable_history": "Activer les données historiques (pour prédictions)",
           "history_days": "Période historique (jours)"
         }
       }
@@ -60,6 +61,7 @@
           "knn_weight_elev": "k-NN : poids élévation",
           "update_interval_seconds": "Intervalle màj (s)",
           "smoothing_window_seconds": "Fenêtre lissage (s)",
+          "enable_history": "Activer historique",
           "history_days": "Jours historique",
           "debug_expected": "Activer capteur debug"
         }
