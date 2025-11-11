@@ -133,7 +133,7 @@ SOURCE_SURPLUS_NET: Final = "surplus_virtual - reserve_w (capped)"
 # ========== Notes ==========
 NOTE_RESERVE: Final = "Zendure reserve applied"
 NOTE_CAP: Final = "System cap applied"
-NOTE_UNITS: Final = "Unit conversion applied (kWâ†’W)"
+NOTE_UNITS: Final = "Unit conversion applied (kWÃ¢â€ â€™W)"
 NOTE_CAP_LIMIT: Final = "3 kW hard limit applied"
 NOTE_HARD_CAP: Final = "3 kW hard limit applied"
 
