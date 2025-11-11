@@ -146,6 +146,11 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             user_input.get(CONF_DEBUG_EXPECTED, DEF_DEBUG_EXPECTED), DEF_DEBUG_EXPECTED
         )
 
+        # enable_history: doit être un booléen
+        user_input[CONF_ENABLE_HISTORY] = SPVMConfigFlow._coerce_bool(
+            user_input.get(CONF_ENABLE_HISTORY, DEF_ENABLE_HISTORY), DEF_ENABLE_HISTORY
+        )
+
         # Validate power unit
         if user_input.get(CONF_UNIT_POWER) not in ("W", "kW"):
             user_input[CONF_UNIT_POWER] = DEF_UNIT_POWER
