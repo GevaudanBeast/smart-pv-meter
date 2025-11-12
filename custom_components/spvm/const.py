@@ -1,4 +1,4 @@
-"""Constantes Smart PV Meter (SPVM) v0.6.0 + compat rétro."""
+"""Constantes Smart PV Meter (SPVM) v0.6.1 + compat rétro."""
 from __future__ import annotations
 from typing import Final
 
@@ -17,7 +17,7 @@ CONF_BATTERY_SENSOR: Final = "battery_sensor"           # Batterie signée (+dé
 CONF_LUX_SENSOR: Final = "lux_sensor"                   # Lux (optionnel)
 CONF_TEMP_SENSOR: Final = "temp_sensor"                 # Température (optionnel)
 CONF_HUM_SENSOR: Final = "hum_sensor"                   # Humidité (optionnel)
-CONF_CLOUD_SENSOR: Final = "cloud_sensor"               # Couverture nuageuse en % (0–100, optionnel)
+CONF_CLOUD_SENSOR: Final = "cloud_sensor"               # Couverture nuageuse 0–100 % (optionnel)
 
 # Unités
 UNIT_W: Final = "W"
@@ -25,6 +25,7 @@ UNIT_KW: Final = "kW"
 KW_TO_W: Final = 1000.0
 UNIT_C: Final = "°C"
 UNIT_F: Final = "°F"
+UNIT_PERCENT: Final = "%"
 
 CONF_UNIT_POWER: Final = "unit_power"                   # "W" | "kW"
 CONF_UNIT_TEMP: Final = "unit_temp"                     # "°C" | "°F"
@@ -76,6 +77,12 @@ CONF_SMOOTHING_WINDOW: Final = CONF_SMOOTHING_WINDOW_SECONDS
 # Noms d’entités créées
 S_SPVM_EXPECTED_PRODUCTION: Final = "spvm_expected_production"
 L_EXPECTED_PRODUCTION: Final = "SPVM – Production attendue"
+
+S_SPVM_YIELD_RATIO: Final = "spvm_yield_ratio"
+L_YIELD_RATIO: Final = "SPVM – Rendement (%)"
+
+S_SPVM_SURPLUS_NET: Final = "spvm_surplus_net"
+L_SURPLUS_NET: Final = "SPVM – Surplus net"
 
 # Attributs
 ATTR_MODEL_TYPE: Final = "model_type"
