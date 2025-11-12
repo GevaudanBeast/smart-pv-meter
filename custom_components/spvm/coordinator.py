@@ -10,12 +10,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .const_v06 import (
+from .const import (
     CONF_UPDATE_INTERVAL,
     DEF_UPDATE_INTERVAL,
     DOMAIN,
 )
-from .expected_v06 import ExpectedProductionCalculator
+from .expected import ExpectedProductionCalculator
 
 _LOGGER = logging.getLogger(__name__)
 
