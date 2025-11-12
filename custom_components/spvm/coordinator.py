@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from typing import Any, Optional, Union, Dict
 
 from homeassistant.core import HomeAssistant, State
@@ -20,12 +20,19 @@ from .const import (
     # reserve / caps / ageing
     CONF_RESERVE_W, DEF_RESERVE_W, CONF_CAP_MAX_W, DEF_CAP_MAX_W,
     CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT,
+    # solar model params
+    CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER, CONF_PANEL_TILT, DEF_PANEL_TILT,
+    CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH,
+    CONF_SITE_LATITUDE, DEF_SITE_LATITUDE, CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE,
+    CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE, CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY,
     # timing
     CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL,
     CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW,
     # labels
-    ATTR_MODEL_TYPE, ATTR_SOURCE, ATTR_DEGRADATION_PCT, ATTR_NOTE, NOTE_SOLAR_MODEL,
+    ATTR_MODEL_TYPE, ATTR_SOURCE, ATTR_DEGRADATION_PCT, ATTR_SYSTEM_EFFICIENCY,
+    ATTR_SITE, ATTR_PANEL, ATTR_NOTE, NOTE_SOLAR_MODEL,
 )
+from .solar_model import SolarInputs, compute as solar_compute
 
 _LOGGER = logging.getLogger(__name__)
 Number = Union[float, int]
@@ -49,7 +56,7 @@ def _safe_float(state: Optional[State]) -> Optional[float]:
 
 
 class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
-    """Compute expected solar production + KPIs (v0.6.1)."""
+    """Compute expected solar production with physical model + KPIs."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.hass = hass
@@ -80,6 +87,25 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         self.cap_max_w: Number = data.get(CONF_CAP_MAX_W, DEF_CAP_MAX_W)
         self.degradation_pct: Number = data.get(CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT)
 
+        # Solar model params (fallback to HA config if None)
+        self.panel_peak_w: float = float(data.get(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER))
+        self.panel_tilt_deg: float = float(data.get(CONF_PANEL_TILT, DEF_PANEL_TILT))
+        self.panel_az_deg: float = float(data.get(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH))
+
+        self.site_lat: float = float(
+            data.get(CONF_SITE_LATITUDE, self.hass.config.latitude if self.hass.config.latitude is not None else 0.0)
+            or 0.0
+        )
+        self.site_lon: float = float(
+            data.get(CONF_SITE_LONGITUDE, self.hass.config.longitude if self.hass.config.longitude is not None else 0.0)
+            or 0.0
+        )
+        self.site_alt: float = float(
+            data.get(CONF_SITE_ALTITUDE, self.hass.config.elevation if self.hass.config.elevation is not None else 0.0)
+            or 0.0
+        )
+        self.system_eff: float = float(data.get(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY))
+
         # Timing
         self.update_interval_s: int = int(data.get(CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL))
         self.smoothing_window_s: int = int(data.get(CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW))
@@ -92,8 +118,8 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         )
 
     async def _async_update_data(self) -> SPVMData:
-        """Compute expected production (W) and KPIs."""
-        # Read current states
+        """Compute expected production (W) and KPIs with physical model."""
+        # Read current states (inputs)
         pv = _safe_float(self.hass.states.get(self.pv_entity))
         house = _safe_float(self.hass.states.get(self.house_entity))
         grid = _safe_float(self.hass.states.get(self.grid_entity)) if self.grid_entity else None
@@ -106,39 +132,42 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         if pv is None:
             raise UpdateFailed("pv_sensor has no numeric state")
         if house is None:
-            # On préfère lever une erreur claire plutôt que de produire des valeurs fausses
             raise UpdateFailed("house_sensor has no numeric state")
 
-        # Convert PV to W if provided in kW
-        pv_w = pv * KW_TO_W if self.unit_power == UNIT_KW else pv
-        house_w = house * KW_TO_W if self.unit_power == UNIT_KW else house  # homogénéité si user a mis kW pour les deux
+        # Convert PV / HOUSE to W if user selected kW
+        factor = KW_TO_W if self.unit_power == UNIT_KW else 1.0
+        pv_w = pv * factor
+        house_w = house * factor
+        grid_w = grid * factor if grid is not None else None
 
-        # --- Expected model (identique v0.6.0) ---
-        expected_clear_w = float(min(max(pv_w, 0.0), float(self.cap_max_w)))
-        deg_factor = max(0.0, 1.0 - float(self.degradation_pct) / 100.0)
-        expected_after_deg = expected_clear_w * deg_factor
-        if cloud is not None:
-            c = min(max(cloud, 0.0), 100.0)
-            expected_after_cloud = expected_after_deg * (1.0 - c / 100.0)
-        else:
-            expected_after_cloud = expected_after_deg
-        expected_final_w = max(expected_after_cloud - float(self.reserve_w), 0.0)
-        expected_final_w = min(expected_final_w, float(self.cap_max_w))
+        # ---- Physical solar model ----
+        now_utc = datetime.now(timezone.utc)
+        inputs = SolarInputs(
+            dt_utc=now_utc,
+            lat_deg=self.site_lat,
+            lon_deg=self.site_lon,
+            altitude_m=self.site_alt,
+            panel_tilt_deg=self.panel_tilt_deg,
+            panel_azimuth_deg=self.panel_az_deg,
+            panel_peak_w=self.panel_peak_w,
+            system_efficiency=self.system_eff,
+            cloud_pct=cloud,
+            temp_c=temp,
+        )
+        model = solar_compute(inputs)
 
-        # --- Yield ratio (%): réelle / attendue ---
-        if expected_final_w > 1e-6:
-            yield_ratio_pct = max(0.0, (pv_w / expected_final_w) * 100.0)
-        else:
-            yield_ratio_pct = None  # indéfini si attente ~0
+        # Degradation correction (linéaire) + réserve + cap
+        expected_w = model.expected_corrected_w * max(0.0, 1.0 - float(self.degradation_pct) / 100.0)
+        expected_w = max(expected_w - float(self.reserve_w), 0.0)
+        expected_w = min(expected_w, float(self.cap_max_w))
 
-        # --- Surplus net (W) ---
-        # Surplus "virtuel" = max(export, pv - house).
+        # KPIs
+        yield_ratio_pct = (pv_w / expected_w) * 100.0 if expected_w > 1e-6 else None
+
         surplus_virtual = pv_w - house_w
-        if grid is not None:
-            # Convention fréquente: grid +import / -export -> export = -grid (>=0)
-            export_w = max(-(grid * (KW_TO_W if self.unit_power == UNIT_KW else 1.0)), 0.0)
+        if grid_w is not None:
+            export_w = max(-grid_w, 0.0)  # grid +import/-export
             surplus_virtual = max(surplus_virtual, export_w)
-        # Réserve Zendure (150 W) garantie
         surplus_net_w = max(surplus_virtual - float(self.reserve_w), 0.0)
 
         attrs: Dict[str, Any] = {
@@ -153,13 +182,20 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
                 "hum": self.hum_entity,
                 "cloud": self.cloud_entity,
             },
-            "unit_power": self.unit_power,
+            ATTR_SYSTEM_EFFICIENCY: self.system_eff,
+            ATTR_DEGRADATION_PCT: self.degradation_pct,
+            ATTR_SITE: {"lat": self.site_lat, "lon": self.site_lon, "alt_m": self.site_alt},
+            ATTR_PANEL: {"tilt_deg": self.panel_tilt_deg, "azimuth_deg": self.panel_az_deg, "peak_w": self.panel_peak_w},
             "reserve_w": self.reserve_w,
             "cap_max_w": self.cap_max_w,
-            ATTR_DEGRADATION_PCT: self.degradation_pct,
-            ATTR_NOTE: "Expected=W (clear→degradation→cloud→reserve, capped). KPIs: yield_ratio %, surplus_net W.",
+            "model_elevation_deg": model.elevation_deg,
+            "model_azimuth_deg": model.azimuth_deg,
+            "model_declination_deg": model.declination_deg,
+            "model_incidence_deg": model.incidence_deg,
+            "ghi_clear_wm2": model.ghi_clear_wm2,
+            "poa_clear_wm2": model.poa_clear_wm2,
+            ATTR_NOTE: "Physical clear-sky + incidence; cloud & temp corrections; then degradation, reserve, cap.",
         }
-
         if grid is not None:
             attrs["grid_now"] = grid
         if batt is not None:
@@ -174,8 +210,8 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             attrs["cloud_now_pct"] = cloud
 
         return SPVMData(
-            expected_w=float(expected_final_w),
-            yield_ratio_pct=yield_ratio_pct,
-            surplus_net_w=float(surplus_net_w),
+            expected_w=float(round(expected_w, 3)),
+            yield_ratio_pct=None if yield_ratio_pct is None else float(round(yield_ratio_pct, 2)),
+            surplus_net_w=float(round(surplus_net_w, 1)),
             attrs=attrs,
         )
