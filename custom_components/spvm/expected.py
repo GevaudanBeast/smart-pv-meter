@@ -1,501 +1,220 @@
-"""Expected production calculator using k-NN algorithm."""
+"""Expected production calculator using solar physics model (v0.6.0)."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from typing import Any
 
-from homeassistant.components.recorder import get_instance, history
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import HISTORY_DAYS, KW_TO_W, TIMEZONE, UNIT_KW
-from .helpers import (
-    calculate_distance,
-    circular_distance,
-    get_minutes_of_day,
-    normalize_value,
-    to_float,
+from .const_v06 import (
+    CONF_CLOUD_SENSOR,
+    CONF_LUX_SENSOR,
+    CONF_PANEL_AZIMUTH,
+    CONF_PANEL_PEAK_POWER,
+    CONF_PANEL_TILT,
+    CONF_SITE_ALTITUDE,
+    CONF_SITE_LATITUDE,
+    CONF_SITE_LONGITUDE,
+    CONF_SYSTEM_EFFICIENCY,
+    CONF_TEMP_SENSOR,
+    CONF_UNIT_TEMP,
+    DEF_PANEL_AZIMUTH,
+    DEF_PANEL_PEAK_POWER,
+    DEF_PANEL_TILT,
+    DEF_SITE_ALTITUDE,
+    DEF_SITE_LATITUDE,
+    DEF_SITE_LONGITUDE,
+    DEF_SYSTEM_EFFICIENCY,
+    DEF_UNIT_TEMP,
+    KW_TO_W,
+    TIMEZONE,
+    UNIT_F,
 )
+from .helpers import fahrenheit_to_celsius, to_float
+from .solar_model import SolarModel
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class ExpectedProductionCalculator:
-    """Calculate expected PV production using k-NN."""
+    """Calculate expected PV production using solar physics model."""
 
     def __init__(self, hass: HomeAssistant, config: dict[str, Any]) -> None:
         """Initialize calculator."""
         self.hass = hass
         self.config = config
-        self._cache: dict[str, Any] = {}
+        
+        # Extract solar model parameters
+        latitude = config.get(CONF_SITE_LATITUDE, DEF_SITE_LATITUDE)
+        longitude = config.get(CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE)
+        
+        # Initialize solar model
+        self.solar_model = SolarModel(
+            latitude=latitude,
+            longitude=longitude,
+            timezone=TIMEZONE,
+        )
+        
+        _LOGGER.info(
+            "Solar model initialized (lat=%.4f, lon=%.4f, tz=%s)",
+            latitude,
+            longitude,
+            TIMEZONE,
+        )
 
     async def async_calculate(self) -> dict[str, Any]:
-        """Calculate expected production."""
+        """Calculate expected production using solar model."""
         try:
-            # Get current conditions
-            current = self._get_current_conditions()
+            # Get current time
+            now = dt_util.now()
             
-            if not current:
-                _LOGGER.warning("Cannot get current conditions")
-                return self._get_empty_result()
-
-            # Get historical data
-            historical_data = await self._get_historical_data()
+            # Get weather conditions
+            weather = self._get_weather_conditions()
             
-            if not historical_data:
-                _LOGGER.warning("No historical data available")
-                return self._get_time_only_fallback(current)
-
-            # Calculate k-NN
-            result = self._calculate_knn(current, historical_data)
+            # Get panel configuration
+            panel_config = self._get_panel_config()
+            
+            # Calculate using solar model
+            result = await self.hass.async_add_executor_job(
+                self._calculate_solar_production,
+                now,
+                panel_config,
+                weather,
+            )
             
             return result
-
+            
         except Exception as err:
             _LOGGER.error("Error calculating expected production: %s", err)
             return self._get_empty_result()
 
-    def _get_current_conditions(self) -> dict[str, Any] | None:
-        """Get current weather and time conditions."""
-        # Use Home Assistant's local time
-        now = dt_util.now()
-        
-        # Get sun elevation - make it optional
-        sun_state = self.hass.states.get("sun.sun")
-        elevation = 0.0
-        
-        if sun_state is None:
-            _LOGGER.debug("Sun entity not available, using elevation=0")
-        else:
-            try:
-                elevation = float(sun_state.attributes.get("elevation", 0))
-            except (ValueError, TypeError):
-                _LOGGER.debug("Could not read sun elevation, using 0")
-                elevation = 0.0
-
-        # Get sensors
-        lux = None
-        if self.config.get("lux_sensor"):
-            lux_state = self.hass.states.get(self.config["lux_sensor"])
-            lux = to_float(lux_state, None)
-
-        temp = None
-        if self.config.get("temp_sensor"):
-            temp_state = self.hass.states.get(self.config["temp_sensor"])
-            temp = to_float(temp_state, None)
-
-        hum = None
-        if self.config.get("hum_sensor"):
-            hum_state = self.hass.states.get(self.config["hum_sensor"])
-            hum = to_float(hum_state, None)
-        return {
-            "timestamp": now,
-            "minutes_of_day": get_minutes_of_day(now),
-            "elevation": elevation,
-            "lux": lux,
-            "temp": temp,
-            "hum": hum,
-        }
-
-    async def _get_historical_data(self) -> list[dict[str, Any]]:
-        """Get historical data from recorder."""
-        # Check cache
-        if "historical_data" in self._cache:
-            cache_time = self._cache.get("cache_time")
-            if cache_time and (dt_util.now() - cache_time).seconds < 3600:
-                return self._cache["historical_data"]
-
-        end_time = dt_util.now()
-        start_time = end_time - timedelta(days=HISTORY_DAYS)
-
-        try:
-            # Get PV history
-            pv_entity = str(self.config["pv_sensor"])
-            pv_states = await get_instance(self.hass).async_add_executor_job(
-                history.state_changes_during_period,
-                self.hass,
-                start_time,
-                end_time,
-                pv_entity,
-            )
-
-            # Get sun history
-            sun_states = await get_instance(self.hass).async_add_executor_job(
-                history.state_changes_during_period,
-                self.hass,
-                start_time,
-                end_time,
-                "sun.sun",
-            )
-
-            # Get weather sensors history if configured
-            lux_states = {}
-            temp_states = {}
-            hum_states = {}
-            
-            if self.config.get("lux_sensor"):
-                lux_states = await get_instance(self.hass).async_add_executor_job(
-                    history.state_changes_during_period,
-                    self.hass,
-                    start_time,
-                    end_time,
-                    str(self.config["lux_sensor"]),
-                )
-            
-            if self.config.get("temp_sensor"):
-                temp_states = await get_instance(self.hass).async_add_executor_job(
-                    history.state_changes_during_period,
-                    self.hass,
-                    start_time,
-                    end_time,
-                    str(self.config["temp_sensor"]),
-                )
-            
-            if self.config.get("hum_sensor"):
-                hum_states = await get_instance(self.hass).async_add_executor_job(
-                    history.state_changes_during_period,
-                    self.hass,
-                    start_time,
-                    end_time,
-                    str(self.config["hum_sensor"]),
-                )
-
-            # Combine all states
-            combined_states = {
-                **pv_states,
-                **sun_states,
-                **lux_states,
-                **temp_states,
-                **hum_states,
-            }
-
-            # Process data
-            data_points = self._process_historical_states(combined_states)
-            
-            # Cache results
-            self._cache["historical_data"] = data_points
-            self._cache["cache_time"] = dt_util.now()
-            
-            _LOGGER.debug("Loaded %d historical data points", len(data_points))
-            
-            return data_points
-
-        except Exception as err:
-            _LOGGER.error("Error fetching historical data: %s", err)
-            return []
-
-    def _process_historical_states(
-        self, historical_states: dict[str, list]
-    ) -> list[dict[str, Any]]:
-        """Process historical states into data points."""
-        data_points = []
-        
-        # Get PV states - historical_states is a dict with entity_id as key
-        pv_entity = self.config["pv_sensor"]
-        pv_states = historical_states.get(pv_entity, [])
-        
-        if not pv_states:
-            _LOGGER.warning("No PV states found for entity %s", pv_entity)
-            return []
-        
-        for pv_state in pv_states:
-            if pv_state.state in ("unknown", "unavailable", "none", None):
-                continue
-                
-            try:
-                pv_value = float(pv_state.state)
-                
-                # Convert kW to W if needed
-                if self.config.get("unit_power") == UNIT_KW:
-                    pv_value *= KW_TO_W
-                
-                if pv_value < 0:
-                    continue
-                
-                # Get timestamp
-                timestamp = pv_state.last_changed
-                # Use dt_util for timezone handling
-                timestamp = dt_util.as_local(timestamp)
-                
-                # Create data point
-                point = {
-                    "timestamp": timestamp,
-                    "minutes_of_day": get_minutes_of_day(timestamp),
-                    "pv_w": pv_value,
-                }
-                
-                # Add weather data (find closest)
-                point.update(self._get_closest_weather(timestamp, historical_states))
-                
-                data_points.append(point)
-                
-            except (ValueError, TypeError) as err:
-                _LOGGER.debug("Skipping invalid PV state: %s", err)
-                continue
-        
-        return data_points
-
-    def _get_closest_weather(
-        self, timestamp: datetime, historical_states: dict[str, list]
-    ) -> dict[str, float | None]:
-        """Get closest weather data for timestamp."""
-        result = {
-            "elevation": None,
+    def _get_weather_conditions(self) -> dict[str, float | None]:
+        """Get current weather conditions from sensors."""
+        conditions = {
+            "cloud_coverage": None,
+            "temperature": None,
             "lux": None,
-            "temp": None,
-            "hum": None,
         }
         
-        # Sun elevation
-        sun_states = historical_states.get("sun.sun", [])
-        closest_sun = self._find_closest_state(sun_states, timestamp)
-        if closest_sun:
-            try:
-                result["elevation"] = float(
-                    closest_sun.attributes.get("elevation", 0)
-                )
-            except (ValueError, TypeError):
-                pass
+        # Cloud coverage (0-100%)
+        if self.config.get(CONF_CLOUD_SENSOR):
+            cloud_state = self.hass.states.get(self.config[CONF_CLOUD_SENSOR])
+            conditions["cloud_coverage"] = to_float(cloud_state, None)
         
-        # Lux
-        if self.config.get("lux_sensor"):
-            lux_states = historical_states.get(self.config["lux_sensor"], [])
-            closest_lux = self._find_closest_state(lux_states, timestamp)
-            if closest_lux:
-                result["lux"] = to_float(closest_lux, None)
+        # Temperature (convert to °C if needed)
+        if self.config.get(CONF_TEMP_SENSOR):
+            temp_state = self.hass.states.get(self.config[CONF_TEMP_SENSOR])
+            temp = to_float(temp_state, None)
+            if temp is not None:
+                unit_temp = self.config.get(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
+                if unit_temp == UNIT_F:
+                    temp = fahrenheit_to_celsius(temp)
+                conditions["temperature"] = temp
         
-        # Temperature
-        if self.config.get("temp_sensor"):
-            temp_states = historical_states.get(self.config["temp_sensor"], [])
-            closest_temp = self._find_closest_state(temp_states, timestamp)
-            if closest_temp:
-                result["temp"] = to_float(closest_temp, None)
+        # Lux (illuminance)
+        if self.config.get(CONF_LUX_SENSOR):
+            lux_state = self.hass.states.get(self.config[CONF_LUX_SENSOR])
+            conditions["lux"] = to_float(lux_state, None)
         
-        # Humidity
-        if self.config.get("hum_sensor"):
-            hum_states = historical_states.get(self.config["hum_sensor"], [])
-            closest_hum = self._find_closest_state(hum_states, timestamp)
-            if closest_hum:
-                result["hum"] = to_float(closest_hum, None)
-        
-        return result
+        return conditions
 
-    @staticmethod
-    def _find_closest_state(states: list, target_time: datetime):
-        """Find state closest to target time."""
-        if not states:
-            return None
-        
-        closest = None
-        min_diff = float("inf")
-        
-        for state in states:
-            diff = abs((state.last_changed - target_time).total_seconds())
-            if diff < min_diff:
-                min_diff = diff
-                closest = state
-        
-        return closest
+    def _get_panel_config(self) -> dict[str, float]:
+        """Get panel configuration from config."""
+        return {
+            "peak_power": self.config.get(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER),
+            "tilt": self.config.get(CONF_PANEL_TILT, DEF_PANEL_TILT),
+            "azimuth": self.config.get(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH),
+            "altitude": self.config.get(CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE),
+            "efficiency": self.config.get(
+                CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY
+            ),
+        }
 
-    def _calculate_knn(
-        self, current: dict[str, Any], historical_data: list[dict[str, Any]]
+    def _calculate_solar_production(
+        self,
+        dt: datetime,
+        panel_config: dict[str, float],
+        weather: dict[str, float | None],
     ) -> dict[str, Any]:
-        """Calculate k-NN expected production."""
-        k = self.config.get("k", 5)
-        window_min = self.config.get("window_min", 30)
-        window_max = self.config.get("window_max", 90)
+        """Calculate production (runs in executor)."""
+        # Get solar position
+        solar_position = self.solar_model.calculate_solar_position(dt)
         
-        # Filter by time window
-        candidates = self._filter_by_time_window(
-            historical_data, current["minutes_of_day"], window_min, window_max
+        # Check if sun is up
+        if solar_position["elevation"] <= 0:
+            return self._get_nighttime_result(solar_position)
+        
+        # Calculate production with weather adjustments
+        production = self.solar_model.calculate_weather_adjusted_production(
+            dt=dt,
+            panel_peak_power=panel_config["peak_power"],
+            panel_tilt=panel_config["tilt"],
+            panel_azimuth=panel_config["azimuth"],
+            altitude=panel_config["altitude"],
+            system_efficiency=panel_config["efficiency"],
+            cloud_coverage=weather["cloud_coverage"],
+            temperature=weather["temperature"],
+            lux=weather["lux"],
         )
         
-        if not candidates:
-            _LOGGER.info(
-                "No candidates in time window, using fallback. "
-                "This is normal during night or when historical data is limited."
-            )
-            return self._get_time_only_fallback(current)
-        
-        # Filter by sun elevation (only if sun.sun is available)
-        if current["elevation"] != 0.0:
-            candidates_before = len(candidates)
-            candidates = self._filter_by_elevation(
-                candidates, current["elevation"], threshold=15.0
-            )
-            
-            if not candidates:
-                _LOGGER.info(
-                    "No candidates after elevation filter (from %d), using fallback. "
-                    "This is normal at night or during weather changes.",
-                    candidates_before
-                )
-                return self._get_time_only_fallback(current)
-        else:
-            _LOGGER.debug("Sun elevation not available, skipping elevation filter")
-        
-        # Calculate normalization ranges
-        norm_ranges = self._calculate_normalization_ranges(candidates)
-        
-        # Calculate distances
-        distances = []
-        for candidate in candidates:
-            dist = self._calculate_weighted_distance(
-                current, candidate, norm_ranges
-            )
-            distances.append((dist, candidate))
-        
-        # Sort by distance and take k nearest
-        distances.sort(key=lambda x: x[0])
-        neighbors = distances[:k]
-        
-        # Calculate weighted average
-        total_weight = 0.0
-        weighted_sum = 0.0
-        
-        for dist, neighbor in neighbors:
-            # Inverse distance weighting
-            weight = 1.0 / (dist + 0.001)  # Add small epsilon
-            weighted_sum += weight * neighbor["pv_w"]
-            total_weight += weight
-        
-        expected_w = weighted_sum / total_weight if total_weight > 0 else 0.0
+        # Get sunrise/sunset
+        sun_times = self.solar_model.get_sunrise_sunset(dt)
         
         # Build result
         return {
-            "expected_w": max(0.0, expected_w),
-            "expected_kw": max(0.0, expected_w / KW_TO_W),
-            "method": "knn",
-            "k": k,
-            "neighbors": len(neighbors),
-            "candidates": len(candidates),
-            "samples_total": len(historical_data),
-            "window_min": window_min,
-            "window_max": window_max,
-            "weights": {
-                "lux": self.config.get("weight_lux", 0.4),
-                "temp": self.config.get("weight_temp", 0.2),
-                "hum": self.config.get("weight_hum", 0.1),
-                "elev": self.config.get("weight_elev", 0.3),
-            },
-            "neighbor_values": [n["pv_w"] for _, n in neighbors],
-            "neighbor_distances": [d for d, _ in neighbors],
+            "expected_w": production["adjusted_w"],
+            "expected_kw": production["adjusted_w"] / KW_TO_W,
+            "method": "solar_physics_model",
+            "model_type": "clear_sky_with_weather_adjustments",
+            # Solar position
+            "solar_elevation": round(solar_position["elevation"], 2),
+            "solar_azimuth": round(solar_position["azimuth"], 2),
+            "solar_declination": round(solar_position["declination"], 2),
+            # Production values
+            "theoretical_w": production["theoretical_w"],
+            "theoretical_kw": production["theoretical_w"] / KW_TO_W,
+            # Adjustment factors
+            "cloud_factor": round(production["adjustments"]["cloud_factor"], 3),
+            "temperature_factor": round(
+                production["adjustments"]["temperature_factor"], 3
+            ),
+            "lux_factor": round(production["adjustments"]["lux_factor"], 3),
+            # Panel config
+            "panel_tilt": panel_config["tilt"],
+            "panel_azimuth": panel_config["azimuth"],
+            "panel_peak_power": panel_config["peak_power"],
+            # Sun times
+            "sunrise": sun_times["sunrise"].isoformat(),
+            "sunset": sun_times["sunset"].isoformat(),
+            "solar_noon": sun_times["solar_noon"].isoformat(),
+            # Weather sensors availability
+            "cloud_sensor_available": weather["cloud_coverage"] is not None,
+            "temp_sensor_available": weather["temperature"] is not None,
+            "lux_sensor_available": weather["lux"] is not None,
         }
 
-    def _filter_by_time_window(
-        self, data: list[dict], target_minutes: int, window_min: int, window_max: int
-    ) -> list[dict]:
-        """Filter data by time window."""
-        result = []
-        for point in data:
-            dist = circular_distance(point["minutes_of_day"], target_minutes)
-            if window_min <= dist <= window_max:
-                result.append(point)
-        return result
-
-    def _filter_by_elevation(
-        self, data: list[dict], target_elevation: float, threshold: float = 10.0
-    ) -> list[dict]:
-        """Filter by sun elevation."""
-        result = []
-        for point in data:
-            if point.get("elevation") is None:
-                continue
-            if abs(point["elevation"] - target_elevation) <= threshold:
-                result.append(point)
-        return result
-
-    def _calculate_normalization_ranges(
-        self, data: list[dict]
-    ) -> dict[str, tuple[float, float]]:
-        """Calculate min/max ranges for normalization."""
-        ranges = {}
-        
-        for key in ["lux", "temp", "hum", "elevation"]:
-            values = [p[key] for p in data if p.get(key) is not None]
-            if values:
-                ranges[key] = (min(values), max(values))
-            else:
-                ranges[key] = (0.0, 1.0)
-        
-        return ranges
-
-    def _calculate_weighted_distance(
-        self,
-        current: dict[str, Any],
-        candidate: dict[str, Any],
-        norm_ranges: dict[str, tuple[float, float]],
-    ) -> float:
-        """Calculate weighted distance."""
-        weights = {
-            "lux": self.config.get("weight_lux", 0.4),
-            "temp": self.config.get("weight_temp", 0.2),
-            "hum": self.config.get("weight_hum", 0.1),
-            "elev": self.config.get("weight_elev", 0.3),
-        }
-        
-        distance = 0.0
-        
-        for key, weight in weights.items():
-            if current.get(key) is None or candidate.get(key) is None:
-                continue
-            
-            min_val, max_val = norm_ranges.get(key, (0, 1))
-            norm_current = normalize_value(current[key], min_val, max_val)
-            norm_candidate = normalize_value(candidate[key], min_val, max_val)
-            
-            diff = norm_current - norm_candidate
-            distance += weight * (diff ** 2)
-        
-        return distance ** 0.5
-
-    def _get_time_only_fallback(self, current: dict[str, Any]) -> dict[str, Any]:
-        """Fallback: average of same time Ã‚Â±120min with elevation filter."""
-        _LOGGER.info("Using time-only fallback")
-        
-        if "historical_data" not in self._cache:
-            return self._get_empty_result()
-        
-        historical_data = self._cache["historical_data"]
-        target_minutes = current["minutes_of_day"]
-        target_elevation = current["elevation"]
-        
-        # Filter by time window (Ã‚Â±120 minutes)
-        candidates = self._filter_by_time_window(
-            historical_data, target_minutes, 0, 120
-        )
-        
-        if not candidates:
-            return self._get_empty_result()
-        
-        # Filter by elevation
-        candidates = self._filter_by_elevation(candidates, target_elevation, 15.0)
-        
-        if not candidates:
-            return self._get_empty_result()
-        
-        # Simple average
-        avg_pv = sum(c["pv_w"] for c in candidates) / len(candidates)
-        
+    def _get_nighttime_result(self, solar_position: dict) -> dict[str, Any]:
+        """Get result for nighttime (sun below horizon)."""
         return {
-            "expected_w": max(0.0, avg_pv),
-            "expected_kw": max(0.0, avg_pv / KW_TO_W),
-            "method": "time_only_fallback",
-            "samples": len(candidates),
-            "samples_total": len(historical_data),
+            "expected_w": 0.0,
+            "expected_kw": 0.0,
+            "method": "solar_physics_model",
+            "model_type": "nighttime",
+            "solar_elevation": round(solar_position["elevation"], 2),
+            "note": "Sun below horizon, no production expected",
         }
 
     def _get_empty_result(self) -> dict[str, Any]:
-        """Get empty result."""
+        """Get empty result on error."""
         return {
             "expected_w": 0.0,
             "expected_kw": 0.0,
             "method": "none",
-            "samples": 0,
+            "error": "Calculation failed",
         }
 
     def reset_cache(self) -> None:
-        """Reset cache."""
-        self._cache.clear()
-        _LOGGER.debug("Calculator cache cleared")
+        """Reset cache (compatibility method, no cache in solar model)."""
+        _LOGGER.debug("Solar model has no cache to reset")
