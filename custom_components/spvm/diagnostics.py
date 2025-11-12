@@ -7,8 +7,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 # ⚠️ CHANGEMENT v0.6.0: Imports depuis modules v06
-from .const_v06 import DOMAIN
-from .coordinator_v06 import SPVMCoordinator
+from .const import DOMAIN
+from .coordinator import SPVMCoordinator
 
 
 async def async_get_config_entry_diagnostics(
