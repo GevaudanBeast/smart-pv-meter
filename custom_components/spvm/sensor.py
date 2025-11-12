@@ -15,8 +15,8 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-# ⚠️ CHANGEMENT v0.6.0: Imports depuis const_v06
-from .const_v06 import (
+# ⚠️ CHANGEMENT v0.6.0: Imports depuis const
+from .const import (
     DOMAIN, NAME, MANUFACTURER, HARD_CAP_W,
     CONF_PV_SENSOR, CONF_HOUSE_SENSOR, CONF_GRID_POWER_SENSOR, CONF_BATTERY_SENSOR,
     CONF_RESERVE_W, CONF_UNIT_POWER, CONF_CAP_MAX_W, CONF_DEGRADATION_PCT,
@@ -34,7 +34,7 @@ from .const_v06 import (
     NOTE_RESERVE, NOTE_CAP, NOTE_HARD_CAP,
 )
 # ⚠️ CHANGEMENT v0.6.0: Import depuis coordinator_v06
-from .coordinator_v06 import SPVMCoordinator
+from .coordinator import SPVMCoordinator
 from .helpers import (
     state_to_float, convert_to_w, clamp, rolling_average,
     merge_config_options, format_timestamp
@@ -278,8 +278,8 @@ class ExpectedDebugSensor(CoordinatorEntity, BaseSPVMSensor):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    # ⚠️ CHANGEMENT v0.6.0: Import depuis const_v06
-    from .const_v06 import DOMAIN
+    # ⚠️ CHANGEMENT v0.6.0: Import depuis const
+    from .const import DOMAIN
     
     coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     config = merge_config_options(entry.data, entry.options)
