@@ -2,32 +2,32 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configure Smart PV Meter",
-        "description": "Select source sensors and parameters. The following entities will be created: sensor.spvm_grid_power_auto, sensor.spvm_surplus_virtual, sensor.spvm_surplus_net_raw, sensor.spvm_surplus_net (use this for Solar Optimizer), sensor.spvm_pv_effective_cap_now_w, sensor.spvm_expected_similar",
+        "title": "Configure Smart PV Meter v0.6.0",
+        "description": "Configure your Smart PV Meter with solar physics model. Entities created: sensor.spvm_grid_power_auto, sensor.spvm_surplus_virtual, sensor.spvm_surplus_net_raw, sensor.spvm_surplus_net (use for Solar Optimizer), sensor.spvm_pv_effective_cap_now_w, sensor.spvm_expected_production",
         "data": {
           "pv_sensor": "PV production sensor (power)",
           "house_sensor": "House consumption sensor (power)",
           "grid_power_sensor": "Grid power sensor (+import / -export) - optional",
           "battery_sensor": "Battery power sensor (+discharge / -charge) - optional",
-          "expected_sensor": "'Expected production' external sensor (optional, if not using k-NN)",
-          "lux_sensor": "Brightness sensor (lux) - optional but recommended for k-NN",
-          "temp_sensor": "Ambient temperature sensor - optional but recommended for k-NN",
-          "hum_sensor": "Humidity sensor - optional for k-NN",
+          "lux_sensor": "Brightness sensor (lux) - optional but recommended",
+          "temp_sensor": "Ambient temperature sensor - optional but recommended",
+          "hum_sensor": "Humidity sensor - optional",
+          "cloud_sensor": "Cloud coverage sensor (0-100%) - optional",
           "reserve_w": "Zendure battery reserve (W) kept permanently",
           "cap_max_w": "Inverter saturation limit (W) - hard cap at 3000W",
           "degradation_pct": "Panel wear / degradation (%)",
+          "panel_peak_power": "Panel peak power (W)",
+          "panel_tilt": "Panel tilt angle (0°=horizontal, 90°=vertical)",
+          "panel_azimuth": "Panel azimuth (0°=North, 90°=East, 180°=South, 270°=West)",
+          "site_latitude": "Site latitude (decimal degrees)",
+          "site_longitude": "Site longitude (decimal degrees)",
+          "site_altitude": "Site altitude (meters above sea level)",
+          "system_efficiency": "System efficiency (inverter + cables + dust, 0.5-1.0)",
           "unit_power": "Displayed power unit (W/kW)",
           "unit_temp": "Temperature unit (°C/°F)",
-          "knn_k": "k-NN: Number of neighbors (k)",
-          "knn_window_min_minutes": "k-NN: Minimum time window (minutes)",
-          "knn_window_max_minutes": "k-NN: Maximum time window (minutes)",
-          "knn_weight_lux": "k-NN: Weight for luminosity",
-          "knn_weight_temp": "k-NN: Weight for temperature",
-          "knn_weight_hum": "k-NN: Weight for humidity",
-          "knn_weight_elev": "k-NN: Weight for sun elevation",
           "update_interval_seconds": "Update interval (seconds)",
           "smoothing_window_seconds": "Smoothing window for surplus_net (seconds)",
-          "history_days": "Historical data period (days)"
+          "debug_expected": "Enable debug sensor"
         }
       }
     }
@@ -35,32 +35,31 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configure SPVM Options",
-        "description": "Modify sensors and parameters",
+        "title": "Configure SPVM Options v0.6.0",
+        "description": "Modify sensors and parameters (solar model)",
         "data": {
           "pv_sensor": "PV production sensor",
           "house_sensor": "House consumption sensor",
           "grid_power_sensor": "Grid power sensor (optional)",
           "battery_sensor": "Battery power sensor (optional)",
-          "expected_sensor": "Expected production sensor (optional)",
           "lux_sensor": "Lux sensor (optional)",
           "temp_sensor": "Temperature sensor (optional)",
           "hum_sensor": "Humidity sensor (optional)",
+          "cloud_sensor": "Cloud coverage sensor (optional)",
           "reserve_w": "Battery reserve (W)",
           "cap_max_w": "System cap (W)",
           "degradation_pct": "Degradation (%)",
+          "panel_peak_power": "Panel peak power (W)",
+          "panel_tilt": "Panel tilt (°)",
+          "panel_azimuth": "Panel azimuth (°)",
+          "site_latitude": "Latitude",
+          "site_longitude": "Longitude",
+          "site_altitude": "Altitude (m)",
+          "system_efficiency": "System efficiency",
           "unit_power": "Power unit",
           "unit_temp": "Temperature unit",
-          "knn_k": "k-NN: k neighbors",
-          "knn_window_min_minutes": "k-NN: min window (min)",
-          "knn_window_max_minutes": "k-NN: max window (min)",
-          "knn_weight_lux": "k-NN: lux weight",
-          "knn_weight_temp": "k-NN: temp weight",
-          "knn_weight_hum": "k-NN: humidity weight",
-          "knn_weight_elev": "k-NN: elevation weight",
           "update_interval_seconds": "Update interval (s)",
           "smoothing_window_seconds": "Smoothing window (s)",
-          "history_days": "History days",
           "debug_expected": "Enable debug sensor"
         }
       }
