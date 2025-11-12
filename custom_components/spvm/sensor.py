@@ -84,6 +84,11 @@ class ComputedPowerSensor(BaseSPVMSensor):
         self._attr_native_value = value
         self._attr_extra_state_attributes = attrs
         self.async_write_ha_state()
+        
+        # Notify downstream listeners
+        if hasattr(self, '_downstream_listeners'):
+            for listener in self._downstream_listeners:
+                listener.trigger_update()
 
     def _compute(self) -> tuple[float | None, dict[str, Any]]:
         return None, {}
@@ -145,10 +150,23 @@ class SurplusVirtualSensor(ComputedPowerSensor):
 
 class SurplusNetRawSensor(ComputedPowerSensor):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, surplus_sensor: SurplusVirtualSensor):
-        # Listen to surplus_virtual sensor changes
-        surplus_entity_id = f"sensor.{S_SPVM_SURPLUS_VIRTUAL}"
-        super().__init__(hass, entry, S_SPVM_SURPLUS_NET_RAW, L_SURPLUS_NET_RAW, [surplus_entity_id])
+        super().__init__(hass, entry, S_SPVM_SURPLUS_NET_RAW, L_SURPLUS_NET_RAW, [])
         self.surplus_sensor = surplus_sensor
+        # Register self to be notified when surplus_virtual changes
+        self._upstream_sensor = surplus_sensor
+
+    async def async_added_to_hass(self) -> None:
+        """When added to hass, register as listener to upstream sensor."""
+        await super().async_added_to_hass()
+        # Subscribe to changes from surplus_virtual
+        if hasattr(self._upstream_sensor, '_downstream_listeners'):
+            self._upstream_sensor._downstream_listeners.append(self)
+        else:
+            self._upstream_sensor._downstream_listeners = [self]
+
+    def trigger_update(self) -> None:
+        """Called by upstream sensor when it updates."""
+        self._recompute()
 
     def _compute(self) -> tuple[float, dict[str, Any]]:
         surplus_v, _ = self.surplus_sensor._compute()
@@ -159,11 +177,24 @@ class SurplusNetRawSensor(ComputedPowerSensor):
 
 class SurplusNetSensor(ComputedPowerSensor):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, raw_sensor: SurplusNetRawSensor):
-        # Listen to surplus_net_raw sensor changes
-        raw_entity_id = f"sensor.{S_SPVM_SURPLUS_NET_RAW}"
-        super().__init__(hass, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, [raw_entity_id])
+        super().__init__(hass, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, [])
         self.raw_sensor = raw_sensor
         self._history: deque[float] = deque(maxlen=20)
+        # Register self to be notified when surplus_net_raw changes
+        self._upstream_sensor = raw_sensor
+
+    async def async_added_to_hass(self) -> None:
+        """When added to hass, register as listener to upstream sensor."""
+        await super().async_added_to_hass()
+        # Subscribe to changes from surplus_net_raw
+        if hasattr(self._upstream_sensor, '_downstream_listeners'):
+            self._upstream_sensor._downstream_listeners.append(self)
+        else:
+            self._upstream_sensor._downstream_listeners = [self]
+
+    def trigger_update(self) -> None:
+        """Called by upstream sensor when it updates."""
+        self._recompute()
 
     def _compute(self) -> tuple[float, dict[str, Any]]:
         net_raw, _ = self.raw_sensor._compute()
