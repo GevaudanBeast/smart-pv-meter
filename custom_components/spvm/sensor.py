@@ -22,12 +22,11 @@ from .coordinator import SPVMCoordinator
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
     coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]
-    entities: List[SensorEntity] = [
+    async_add_entities([
         SPVMExpectedProduction(coordinator, entry),
         SPVMYieldRatio(coordinator, entry),
         SPVMSurplusNet(coordinator, entry),
-    ]
-    async_add_entities(entities)
+    ])
 
 
 class _Base(CoordinatorEntity[SPVMCoordinator], SensorEntity):
@@ -45,15 +44,15 @@ class _Base(CoordinatorEntity[SPVMCoordinator], SensorEntity):
             "identifiers": {(DOMAIN, self._entry.entry_id)},
             "name": "Smart PV Meter",
             "manufacturer": "SPVM",
-            "model": "Internal Solar Model v0.6.1",
+            "model": "Physical Solar Model v0.6.2",
         }
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        data = self.coordinator.data
-        if not data:
+        d = self.coordinator.data
+        if not d:
             return None
-        return dict(data.attrs)
+        return dict(d.attrs)
 
 
 class SPVMExpectedProduction(_Base):
