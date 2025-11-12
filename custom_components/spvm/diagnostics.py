@@ -1,4 +1,4 @@
-"""Diagnostics support pour SPVM."""
+"""Diagnostics support pour SPVM v0.6.0."""
 from __future__ import annotations
 
 from typing import Any
@@ -6,8 +6,9 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
-from .coordinator import SPVMCoordinator
+# ⚠️ CHANGEMENT v0.6.0: Imports depuis modules v06
+from .const_v06 import DOMAIN
+from .coordinator_v06 import SPVMCoordinator
 
 
 async def async_get_config_entry_diagnostics(
@@ -31,8 +32,10 @@ async def async_get_config_entry_diagnostics(
         ),
     }
 
-    # Ajouter les info k-NN si disponibles
-    if coordinator.data and coordinator._calculator:
-        diagnostics["knn_cache_size"] = len(coordinator._calculator._cache)
+    # Note: Solar model n'a pas de cache contrairement au k-NN
+    if coordinator.data:
+        diagnostics["model_type"] = coordinator.data.get("model_type", "unknown")
+        diagnostics["solar_elevation"] = coordinator.data.get("solar_elevation")
+        diagnostics["expected_w"] = coordinator.data.get("expected_w")
 
     return diagnostics
