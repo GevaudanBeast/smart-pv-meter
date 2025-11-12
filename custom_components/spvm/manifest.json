@@ -9,6 +9,6 @@
   "issue_tracker": "https://github.com/GevaudanBeast/smart-pv-meter/issues",
   "iot_class": "calculated",
   "integration_type": "device",
-  "version": "0.5.8",
+  "version": "0.6.0",
   "requirements": []
 }
