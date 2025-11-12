@@ -1,4 +1,4 @@
-"""Config flow for Smart PV Meter integration."""
+"""Config flow for Smart PV Meter integration v0.6.0 - Solar Model."""
 from __future__ import annotations
 
 from typing import Any
@@ -18,56 +18,63 @@ from homeassistant.helpers.selector import (
     SelectOptionDict,
 )
 
-from .const import (
+from .const_v06 import (
+    # Sensor configs
     CONF_BATTERY_SENSOR,
-    CONF_CAP_MAX_W,
-    CONF_DEBUG_EXPECTED,
-    CONF_DEGRADATION_PCT,
-    CONF_ENTRY_VERSION,
+    CONF_CLOUD_SENSOR,
     CONF_GRID_POWER_SENSOR,
     CONF_HOUSE_SENSOR,
     CONF_HUM_SENSOR,
-    CONF_KNN_K,
-    CONF_KNN_WEIGHT_ELEV,
-    CONF_KNN_WEIGHT_HUM,
-    CONF_KNN_WEIGHT_LUX,
-    CONF_KNN_WEIGHT_TEMP,
-    CONF_KNN_WINDOW_MAX,
-    CONF_KNN_WINDOW_MIN,
     CONF_LUX_SENSOR,
     CONF_PV_SENSOR,
+    CONF_TEMP_SENSOR,
+    # System parameters
+    CONF_CAP_MAX_W,
+    CONF_DEGRADATION_PCT,
     CONF_RESERVE_W,
     CONF_SMOOTHING_WINDOW,
-    CONF_TEMP_SENSOR,
     CONF_UNIT_POWER,
     CONF_UNIT_TEMP,
     CONF_UPDATE_INTERVAL,
+    # Solar model parameters
+    CONF_PANEL_AZIMUTH,
+    CONF_PANEL_PEAK_POWER,
+    CONF_PANEL_TILT,
+    CONF_SITE_ALTITUDE,
+    CONF_SITE_LATITUDE,
+    CONF_SITE_LONGITUDE,
+    CONF_SYSTEM_EFFICIENCY,
+    # Debug
+    CONF_DEBUG_EXPECTED,
+    # Defaults
     DEF_CAP_MAX_W,
     DEF_DEBUG_EXPECTED,
     DEF_DEGRADATION_PCT,
-    DEF_KNN_K,
-    DEF_KNN_WEIGHT_ELEV,
-    DEF_KNN_WEIGHT_HUM,
-    DEF_KNN_WEIGHT_LUX,
-    DEF_KNN_WEIGHT_TEMP,
-    DEF_KNN_WINDOW_MAX,
-    DEF_KNN_WINDOW_MIN,
+    DEF_PANEL_AZIMUTH,
+    DEF_PANEL_PEAK_POWER,
+    DEF_PANEL_TILT,
     DEF_RESERVE_W,
+    DEF_SITE_ALTITUDE,
+    DEF_SITE_LATITUDE,
+    DEF_SITE_LONGITUDE,
     DEF_SMOOTHING_WINDOW,
+    DEF_SYSTEM_EFFICIENCY,
     DEF_UNIT_POWER,
     DEF_UNIT_TEMP,
     DEF_UPDATE_INTERVAL,
+    # Other
+    CONF_ENTRY_VERSION,
     DEFAULT_ENTRY_TITLE,
     DOMAIN,
-    L_EXPECTED_SIMILAR,
+    # Sensor IDs for description
     L_GRID_POWER_AUTO,
-    L_PV_EFFECTIVE_CAP_NOW_W,
     L_SURPLUS_NET,
     L_SURPLUS_NET_RAW,
     L_SURPLUS_VIRTUAL,
+    L_PV_EFFECTIVE_CAP_NOW_W,
+    L_EXPECTED_PRODUCTION,
 )
 
-# Valeurs par dÂ©faut centralisÂ©es
 
 def _entity_selector(domain: str | None = None) -> EntitySelector:
     """Create entity selector."""
@@ -89,7 +96,7 @@ def _number_selector(
 
 
 class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for SPVM."""
+    """Handle a config flow for SPVM v0.6.0."""
 
     VERSION = CONF_ENTRY_VERSION
 
@@ -98,7 +105,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            # Normalisation/validation (inclut dÂ©faut expected_sensor + bool debug)
+            # Normalize input
             user_input = self._normalize_input(user_input)
 
             # Create entry
@@ -110,7 +117,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=user_input,
             )
 
-        # Build schema (avec dÂ©fauts visibles)
+        # Build schema
         schema = self._get_config_schema()
 
         return self.async_show_form(
@@ -123,7 +130,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     def _coerce_bool(value: Any, default: bool = False) -> bool:
-        """Convertit proprement vers bool (gÂ¨re str/bool/entitÂ© hÂ©ritÂ©e)."""
+        """Convert to bool properly."""
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
@@ -132,7 +139,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return True
             if s in ("0", "false", "off", "no", "non", ""):
                 return False
-            # ancien bug: une entitÂ© 'sensor.xxx' stockÂ©e par erreur -> considÂ©rer False
             if s.startswith("sensor."):
                 return default
         return default
@@ -140,8 +146,8 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     def _normalize_input(user_input: dict[str, Any]) -> dict[str, Any]:
         """Normalize and validate user input."""
-
-        # debug_expected: doit Âªtre un boolÂ©en (pas une entitÂ©)
+        
+        # Debug flag
         user_input[CONF_DEBUG_EXPECTED] = SPVMConfigFlow._coerce_bool(
             user_input.get(CONF_DEBUG_EXPECTED, DEF_DEBUG_EXPECTED), DEF_DEBUG_EXPECTED
         )
@@ -164,12 +170,34 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         user_input[CONF_DEGRADATION_PCT] = float(
             user_input.get(CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT)
         )
-        user_input[CONF_KNN_K] = int(float(user_input.get(CONF_KNN_K, DEF_KNN_K)))
         user_input[CONF_UPDATE_INTERVAL] = int(
             float(user_input.get(CONF_UPDATE_INTERVAL, DEF_UPDATE_INTERVAL))
         )
         user_input[CONF_SMOOTHING_WINDOW] = int(
             float(user_input.get(CONF_SMOOTHING_WINDOW, DEF_SMOOTHING_WINDOW))
+        )
+        
+        # Solar model parameters
+        user_input[CONF_PANEL_PEAK_POWER] = int(
+            float(user_input.get(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER))
+        )
+        user_input[CONF_PANEL_TILT] = float(
+            user_input.get(CONF_PANEL_TILT, DEF_PANEL_TILT)
+        )
+        user_input[CONF_PANEL_AZIMUTH] = float(
+            user_input.get(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH)
+        )
+        user_input[CONF_SITE_LATITUDE] = float(
+            user_input.get(CONF_SITE_LATITUDE, DEF_SITE_LATITUDE)
+        )
+        user_input[CONF_SITE_LONGITUDE] = float(
+            user_input.get(CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE)
+        )
+        user_input[CONF_SITE_ALTITUDE] = float(
+            user_input.get(CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE)
+        )
+        user_input[CONF_SYSTEM_EFFICIENCY] = float(
+            user_input.get(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY)
         )
 
         return user_input
@@ -180,21 +208,21 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if defaults is None:
             defaults = {}
 
-        # Valeurs par dÂ©faut visibles dans le formulaire
         debug_default = SPVMConfigFlow._coerce_bool(
             defaults.get(CONF_DEBUG_EXPECTED, DEF_DEBUG_EXPECTED), DEF_DEBUG_EXPECTED
         )
 
         return vol.Schema(
             {
-                # Required sensors
+                # ========== Required sensors ==========
                 vol.Required(
                     CONF_PV_SENSOR, default=defaults.get(CONF_PV_SENSOR, "")
                 ): _entity_selector("sensor"),
                 vol.Required(
                     CONF_HOUSE_SENSOR, default=defaults.get(CONF_HOUSE_SENSOR, "")
                 ): _entity_selector("sensor"),
-                # Optional sensors
+                
+                # ========== Optional sensors ==========
                 vol.Optional(
                     CONF_GRID_POWER_SENSOR,
                     default=defaults.get(CONF_GRID_POWER_SENSOR, ""),
@@ -212,7 +240,11 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_HUM_SENSOR, default=defaults.get(CONF_HUM_SENSOR, "")
                 ): _entity_selector("sensor"),
-                # System parameters
+                vol.Optional(
+                    CONF_CLOUD_SENSOR, default=defaults.get(CONF_CLOUD_SENSOR, "")
+                ): _entity_selector("sensor"),
+                
+                # ========== System parameters ==========
                 vol.Optional(
                     CONF_RESERVE_W, default=defaults.get(CONF_RESERVE_W, DEF_RESERVE_W)
                 ): _number_selector(0, 2000, 10),
@@ -223,35 +255,38 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_DEGRADATION_PCT,
                     default=defaults.get(CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT),
                 ): _number_selector(0, 100, 0.5),
-                # k-NN parameters
+                
+                # ========== Solar model parameters ==========
                 vol.Optional(
-                    CONF_KNN_K, default=defaults.get(CONF_KNN_K, DEF_KNN_K)
-                ): _number_selector(1, 20, 1),
+                    CONF_PANEL_PEAK_POWER,
+                    default=defaults.get(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER),
+                ): _number_selector(100, 20000, 50),
                 vol.Optional(
-                    CONF_KNN_WINDOW_MIN,
-                    default=defaults.get(CONF_KNN_WINDOW_MIN, DEF_KNN_WINDOW_MIN),
-                ): _number_selector(10, 120, 5),
+                    CONF_PANEL_TILT,
+                    default=defaults.get(CONF_PANEL_TILT, DEF_PANEL_TILT),
+                ): _number_selector(0, 90, 1),
                 vol.Optional(
-                    CONF_KNN_WINDOW_MAX,
-                    default=defaults.get(CONF_KNN_WINDOW_MAX, DEF_KNN_WINDOW_MAX),
-                ): _number_selector(30, 240, 5),
+                    CONF_PANEL_AZIMUTH,
+                    default=defaults.get(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH),
+                ): _number_selector(0, 360, 5),
                 vol.Optional(
-                    CONF_KNN_WEIGHT_LUX,
-                    default=defaults.get(CONF_KNN_WEIGHT_LUX, DEF_KNN_WEIGHT_LUX),
-                ): _number_selector(0, 1, 0.05),
+                    CONF_SITE_LATITUDE,
+                    default=defaults.get(CONF_SITE_LATITUDE, DEF_SITE_LATITUDE),
+                ): _number_selector(-90, 90, 0.0001),
                 vol.Optional(
-                    CONF_KNN_WEIGHT_TEMP,
-                    default=defaults.get(CONF_KNN_WEIGHT_TEMP, DEF_KNN_WEIGHT_TEMP),
-                ): _number_selector(0, 1, 0.05),
+                    CONF_SITE_LONGITUDE,
+                    default=defaults.get(CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE),
+                ): _number_selector(-180, 180, 0.0001),
                 vol.Optional(
-                    CONF_KNN_WEIGHT_HUM,
-                    default=defaults.get(CONF_KNN_WEIGHT_HUM, DEF_KNN_WEIGHT_HUM),
-                ): _number_selector(0, 1, 0.05),
+                    CONF_SITE_ALTITUDE,
+                    default=defaults.get(CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE),
+                ): _number_selector(0, 5000, 10),
                 vol.Optional(
-                    CONF_KNN_WEIGHT_ELEV,
-                    default=defaults.get(CONF_KNN_WEIGHT_ELEV, DEF_KNN_WEIGHT_ELEV),
-                ): _number_selector(0, 1, 0.05),
-                # Update & smoothing
+                    CONF_SYSTEM_EFFICIENCY,
+                    default=defaults.get(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY),
+                ): _number_selector(0.5, 1.0, 0.01),
+                
+                # ========== Update & smoothing ==========
                 vol.Optional(
                     CONF_UPDATE_INTERVAL,
                     default=defaults.get(CONF_UPDATE_INTERVAL, DEF_UPDATE_INTERVAL),
@@ -260,7 +295,8 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_SMOOTHING_WINDOW,
                     default=defaults.get(CONF_SMOOTHING_WINDOW, DEF_SMOOTHING_WINDOW),
                 ): _number_selector(10, 180, 5),
-                # Units
+                
+                # ========== Units ==========
                 vol.Optional(
                     CONF_UNIT_POWER,
                     default=defaults.get(CONF_UNIT_POWER, DEF_UNIT_POWER),
@@ -285,7 +321,8 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         mode="dropdown",
                     )
                 ),
-                # Debug (boolÂ©en, plus une entitÂ©)
+                
+                # ========== Debug ==========
                 vol.Optional(
                     CONF_DEBUG_EXPECTED,
                     default=debug_default,
@@ -303,10 +340,12 @@ Entities that will be created:
 • sensor.{L_SURPLUS_NET_RAW.lower().replace(' ', '_').replace('-', '')}
 • sensor.{L_SURPLUS_NET.lower().replace(' ', '_').replace('-', '')}
 • sensor.{L_PV_EFFECTIVE_CAP_NOW_W.lower().replace(' ', '_').replace('-', '')}
-• sensor.{L_EXPECTED_SIMILAR.lower().replace(' ', '_').replace('-', '')}
+• sensor.{L_EXPECTED_PRODUCTION.lower().replace(' ', '_').replace('-', '')}
 
 For Solar Optimizer, use: sensor.spvm_surplus_net
 (150W Zendure reserve and 3kW cap already applied)
+
+v0.6.0: Uses solar physics model instead of k-NN
 """
 
     @staticmethod
@@ -319,11 +358,10 @@ For Solar Optimizer, use: sensor.spvm_surplus_net
 
 
 class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle options flow for SPVM."""
+    """Handle options flow for SPVM v0.6.0."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        # Don't set config_entry explicitly - it's available as self.config_entry
         super().__init__()
 
     async def async_step_init(
@@ -331,14 +369,12 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Manage the options."""
         if user_input is not None:
-            # Normalisation (inclut dÂ©faut expected_sensor + bool debug)
+            # Normalize input
             user_input = SPVMConfigFlow._normalize_input(user_input)
             return self.async_create_entry(title="", data=user_input)
 
         # Merge data and options for defaults
         defaults = {**self.config_entry.data, **self.config_entry.options}
-
-        # S'assure que le dÂ©faut attendu est visible dans le formulaire d'options
 
         # Build schema with current values as defaults
         schema = SPVMConfigFlow._get_config_schema(defaults)
