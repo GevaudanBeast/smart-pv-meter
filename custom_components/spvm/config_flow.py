@@ -18,7 +18,7 @@ from homeassistant.helpers.selector import (
     SelectOptionDict,
 )
 
-from .const_v06 import (
+from .const import (
     # Sensor configs
     CONF_BATTERY_SENSOR,
     CONF_CLOUD_SENSOR,
