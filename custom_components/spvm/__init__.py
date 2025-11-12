@@ -1,4 +1,4 @@
-"""Smart PV Meter (SPVM) integration for Home Assistant."""
+"""Smart PV Meter (SPVM) integration for Home Assistant v0.6.0."""
 from __future__ import annotations
 
 import json
@@ -11,8 +11,9 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
-from .const import DOMAIN
-from .coordinator import SPVMCoordinator
+# ⚠️ CHANGEMENT v0.6.0: Imports depuis modules v06
+from .const_v06 import DOMAIN
+from .coordinator_v06 import SPVMCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
-    _LOGGER.debug("SPVM options updated Ã¢â€ â€™ reloading entry %s", entry.entry_id)
+    _LOGGER.debug("SPVM options updated → reloading entry %s", entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
