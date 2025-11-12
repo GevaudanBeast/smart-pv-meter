@@ -21,8 +21,8 @@ from .const import (
     # solar model params
     CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER, CONF_PANEL_TILT, DEF_PANEL_TILT,
     CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH,
-    CONF_SITE_LATITUDE, DEF_SITE_LATITUDE, CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE,
-    CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE, CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY,
+    CONF_SITE_LATITUDE, CONF_SITE_LONGITUDE, CONF_SITE_ALTITUDE,
+    CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY,
     # timing
     CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL,
     CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW,
@@ -43,105 +43,119 @@ ALL_KEYS = (
 def _ent_sel() -> EntitySelector:
     return EntitySelector(EntitySelectorConfig(domain=["sensor"]))
 
-def _defaults_from(hass: HomeAssistant, base: dict) -> dict:
-    """Merge defaults for form prefill (base already merged: entry.data|options)."""
-    d = dict(base or {})
-    # Inject global HA defaults for site if missing
-    d.setdefault(CONF_SITE_LATITUDE, hass.config.latitude)
-    d.setdefault(CONF_SITE_LONGITUDE, hass.config.longitude)
-    d.setdefault(CONF_SITE_ALTITUDE, hass.config.elevation)
-    # Hard defaults (so selectors always get a number/string)
-    d.setdefault(CONF_UNIT_POWER, DEF_UNIT_POWER)
-    d.setdefault(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
-    d.setdefault(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER)
-    d.setdefault(CONF_PANEL_TILT, DEF_PANEL_TILT)
-    d.setdefault(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH)
-    d.setdefault(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY)
-    d.setdefault(CONF_RESERVE_W, DEF_RESERVE_W)
-    d.setdefault(CONF_CAP_MAX_W, DEF_CAP_MAX_W)
-    d.setdefault(CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT)
-    d.setdefault(CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL)
-    d.setdefault(CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW)
-    return d
-
-def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
-    v = _defaults_from(hass, cur or {})
-    return vol.Schema({
-        # Requis
-        vol.Required(CONF_PV_SENSOR, default=v.get(CONF_PV_SENSOR)): _ent_sel(),
-        vol.Required(CONF_HOUSE_SENSOR, default=v.get(CONF_HOUSE_SENSOR)): _ent_sel(),
-
-        # Optionnels (capteurs)
-        vol.Optional(CONF_GRID_POWER_SENSOR, default=v.get(CONF_GRID_POWER_SENSOR)): _ent_sel(),
-        vol.Optional(CONF_BATTERY_SENSOR, default=v.get(CONF_BATTERY_SENSOR)): _ent_sel(),
-        vol.Optional(CONF_LUX_SENSOR, default=v.get(CONF_LUX_SENSOR)): _ent_sel(),
-        vol.Optional(CONF_TEMP_SENSOR, default=v.get(CONF_TEMP_SENSOR)): _ent_sel(),
-        vol.Optional(CONF_HUM_SENSOR, default=v.get(CONF_HUM_SENSOR)): _ent_sel(),
-        vol.Optional(CONF_CLOUD_SENSOR, default=v.get(CONF_CLOUD_SENSOR)): _ent_sel(),
-
-        # Unités
-        vol.Optional(CONF_UNIT_POWER, default=v.get(CONF_UNIT_POWER)): SelectSelector(
-            SelectSelectorConfig(options=[
-                SelectOptionDict(value=UNIT_W, label="W"),
-                SelectOptionDict(value=UNIT_KW, label="kW"),
-            ], mode="dropdown")
-        ),
-        vol.Optional(CONF_UNIT_TEMP, default=v.get(CONF_UNIT_TEMP)): SelectSelector(
-            SelectSelectorConfig(options=[
-                SelectOptionDict(value=UNIT_C, label="°C"),
-                SelectOptionDict(value=UNIT_F, label="°F"),
-            ], mode="dropdown")
-        ),
-
-        # Modèle solaire (physique)
-        vol.Optional(CONF_PANEL_PEAK_POWER, default=v.get(CONF_PANEL_PEAK_POWER)): NumberSelector(
-            NumberSelectorConfig(min=100, max=20000, step=50, mode="box")
-        ),
-        vol.Optional(CONF_PANEL_TILT, default=v.get(CONF_PANEL_TILT)): NumberSelector(
-            NumberSelectorConfig(min=0, max=90, step=1, mode="box")
-        ),
-        vol.Optional(CONF_PANEL_AZIMUTH, default=v.get(CONF_PANEL_AZIMUTH)): NumberSelector(
-            NumberSelectorConfig(min=0, max=360, step=1, mode="box")
-        ),
-        vol.Optional(CONF_SITE_LATITUDE, default=v.get(CONF_SITE_LATITUDE)): NumberSelector(
-            NumberSelectorConfig(min=-90, max=90, step=0.0001, mode="box")
-        ),
-        vol.Optional(CONF_SITE_LONGITUDE, default=v.get(CONF_SITE_LONGITUDE)): NumberSelector(
-            NumberSelectorConfig(min=-180, max=180, step=0.0001, mode="box")
-        ),
-        vol.Optional(CONF_SITE_ALTITUDE, default=v.get(CONF_SITE_ALTITUDE)): NumberSelector(
-            NumberSelectorConfig(min=-500, max=6000, step=1, mode="box")
-        ),
-        vol.Optional(CONF_SYSTEM_EFFICIENCY, default=v.get(CONF_SYSTEM_EFFICIENCY)): NumberSelector(
-            NumberSelectorConfig(min=0.5, max=1.0, step=0.01, mode="box")
-        ),
-
-        # Réserve / cap / vieillissement
-        vol.Optional(CONF_RESERVE_W, default=v.get(CONF_RESERVE_W)): NumberSelector(
-            NumberSelectorConfig(min=0, max=2000, step=10, mode="box")
-        ),
-        vol.Optional(CONF_CAP_MAX_W, default=v.get(CONF_CAP_MAX_W)): NumberSelector(
-            NumberSelectorConfig(min=0, max=10000, step=50, mode="box")
-        ),
-        vol.Optional(CONF_DEGRADATION_PCT, default=v.get(CONF_DEGRADATION_PCT)): NumberSelector(
-            NumberSelectorConfig(min=0, max=50, step=0.5, mode="box")
-        ),
-
-        # Timing
-        vol.Optional(CONF_UPDATE_INTERVAL_SECONDS, default=v.get(CONF_UPDATE_INTERVAL_SECONDS)): NumberSelector(
-            NumberSelectorConfig(min=5, max=600, step=5, mode="box")
-        ),
-        vol.Optional(CONF_SMOOTHING_WINDOW_SECONDS, default=v.get(CONF_SMOOTHING_WINDOW_SECONDS)): NumberSelector(
-            NumberSelectorConfig(min=0, max=600, step=5, mode="box")
-        ),
-    })
-
 def _validate_required(user_input: dict) -> dict:
     errors: dict = {}
     for k in REQUIRED:
         if not user_input.get(k):
             errors[k] = "required"
     return errors
+
+def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
+    """Construire le schéma sans injecter de default=None (cause 400)."""
+    v = dict(cur or {})
+
+    # helpers : ajout conditionnel du default (seulement si non None)
+    def _opt_sel(schema: dict, key: str, selector):
+        if key in v and v[key] not in (None, ""):
+            schema[vol.Optional(key, default=v[key])] = selector
+        else:
+            schema[vol.Optional(key)] = selector
+
+    def _req_sel(schema: dict, key: str, selector):
+        # Requis: si pas de valeur -> pas de default (laisser le champ vide)
+        if key in v and v[key] not in (None, ""):
+            schema[vol.Required(key, default=v[key])] = selector
+        else:
+            schema[vol.Required(key)] = selector
+
+    def _opt_num(schema: dict, key: str, selector, fallback=None):
+        val = v.get(key, fallback)
+        if val is not None:
+            schema[vol.Optional(key, default=val)] = selector
+        else:
+            schema[vol.Optional(key)] = selector
+
+    def _opt_sel_static(schema: dict, key: str, options: list[SelectOptionDict]):
+        sel = SelectSelector(SelectSelectorConfig(options=options, mode="dropdown"))
+        if key in v and v[key] not in (None, ""):
+            schema[vol.Optional(key, default=v[key])] = sel
+        else:
+            schema[vol.Optional(key)] = sel
+
+    schema: dict = {}
+
+    # Requis
+    _req_sel(schema, CONF_PV_SENSOR, _ent_sel())
+    _req_sel(schema, CONF_HOUSE_SENSOR, _ent_sel())
+
+    # Optionnels capteurs
+    _opt_sel(schema, CONF_GRID_POWER_SENSOR, _ent_sel())
+    _opt_sel(schema, CONF_BATTERY_SENSOR, _ent_sel())
+    _opt_sel(schema, CONF_LUX_SENSOR, _ent_sel())
+    _opt_sel(schema, CONF_TEMP_SENSOR, _ent_sel())
+    _opt_sel(schema, CONF_HUM_SENSOR, _ent_sel())
+    _opt_sel(schema, CONF_CLOUD_SENSOR, _ent_sel())
+
+    # Unités
+    _opt_sel_static(schema, CONF_UNIT_POWER, [
+        SelectOptionDict(value=UNIT_W, label="W"),
+        SelectOptionDict(value=UNIT_KW, label="kW"),
+    ])
+    _opt_sel_static(schema, CONF_UNIT_TEMP, [
+        SelectOptionDict(value=UNIT_C, label="°C"),
+        SelectOptionDict(value=UNIT_F, label="°F"),
+    ])
+
+    # Modèle solaire (physique)
+    _opt_num(schema, CONF_PANEL_PEAK_POWER,
+             NumberSelector(NumberSelectorConfig(min=100, max=20000, step=50, mode="box")),
+             fallback=DEF_PANEL_PEAK_POWER)
+    _opt_num(schema, CONF_PANEL_TILT,
+             NumberSelector(NumberSelectorConfig(min=0, max=90, step=1, mode="box")),
+             fallback=DEF_PANEL_TILT)
+    _opt_num(schema, CONF_PANEL_AZIMUTH,
+             NumberSelector(NumberSelectorConfig(min=0, max=360, step=1, mode="box")),
+             fallback=DEF_PANEL_AZIMUTH)
+
+    # GPS : prendre conf HA si dispo, sinon pas de default (pas None)
+    lat_default = v.get(CONF_SITE_LATITUDE, hass.config.latitude)
+    lon_default = v.get(CONF_SITE_LONGITUDE, hass.config.longitude)
+    alt_default = v.get(CONF_SITE_ALTITUDE, hass.config.elevation)
+
+    _opt_num(schema, CONF_SITE_LATITUDE,
+             NumberSelector(NumberSelectorConfig(min=-90, max=90, step=0.0001, mode="box")),
+             fallback=lat_default if lat_default is not None else None)
+    _opt_num(schema, CONF_SITE_LONGITUDE,
+             NumberSelector(NumberSelectorConfig(min=-180, max=180, step=0.0001, mode="box")),
+             fallback=lon_default if lon_default is not None else None)
+    _opt_num(schema, CONF_SITE_ALTITUDE,
+             NumberSelector(NumberSelectorConfig(min=-500, max=6000, step=1, mode="box")),
+             fallback=alt_default if alt_default is not None else None)
+
+    _opt_num(schema, CONF_SYSTEM_EFFICIENCY,
+             NumberSelector(NumberSelectorConfig(min=0.5, max=1.0, step=0.01, mode="box")),
+             fallback=DEF_SYSTEM_EFFICIENCY)
+
+    # Réserve / cap / vieillissement
+    _opt_num(schema, CONF_RESERVE_W,
+             NumberSelector(NumberSelectorConfig(min=0, max=2000, step=10, mode="box")),
+             fallback=DEF_RESERVE_W)
+    _opt_num(schema, CONF_CAP_MAX_W,
+             NumberSelector(NumberSelectorConfig(min=0, max=10000, step=50, mode="box")),
+             fallback=DEF_CAP_MAX_W)
+    _opt_num(schema, CONF_DEGRADATION_PCT,
+             NumberSelector(NumberSelectorConfig(min=0, max=50, step=0.5, mode="box")),
+             fallback=DEF_DEGRADATION_PCT)
+
+    # Timing
+    _opt_num(schema, CONF_UPDATE_INTERVAL_SECONDS,
+             NumberSelector(NumberSelectorConfig(min=5, max=600, step=5, mode="box")),
+             fallback=DEF_UPDATE_INTERVAL)
+    _opt_num(schema, CONF_SMOOTHING_WINDOW_SECONDS,
+             NumberSelector(NumberSelectorConfig(min=0, max=600, step=5, mode="box")),
+             fallback=DEF_SMOOTHING_WINDOW)
+
+    return vol.Schema(schema)
 
 
 class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -158,7 +172,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
-    """Full editable options form with prefilled values."""
+    """Options (édition) avec préremplissage sans defaults None."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         self.config_entry = config_entry
@@ -169,13 +183,11 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
         merged = {**data_cur, **opts_cur}
 
         if user_input is not None:
-            # Minimal validation
             errors = _validate_required(user_input)
             if errors:
                 return self.async_show_form(step_id="init", data_schema=_schema(self.hass, merged), errors=errors)
 
-            # Save to options (do not mutate data)
-            # Keep only known keys to avoid stray values
+            # ne conserver que les clés connues
             clean = {k: user_input.get(k) for k in ALL_KEYS if k in user_input}
             return self.async_create_entry(title="", data=clean)
 
