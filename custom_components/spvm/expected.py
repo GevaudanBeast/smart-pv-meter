@@ -312,7 +312,10 @@ class ExpectedProductionCalculator:
         )
         
         if not candidates:
-            _LOGGER.warning("No candidates in time window, using fallback")
+            _LOGGER.info(
+                "No candidates in time window, using fallback. "
+                "This is normal during night or when historical data is limited."
+            )
             return self._get_time_only_fallback(current)
         
         # Filter by sun elevation (only if sun.sun is available)
