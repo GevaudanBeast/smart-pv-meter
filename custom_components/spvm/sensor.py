@@ -1,4 +1,4 @@
-"""Capteurs SPVM."""
+"""Capteurs SPVM v0.6.0."""
 from __future__ import annotations
 
 import json
@@ -15,7 +15,8 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from .const import (
+# ⚠️ CHANGEMENT v0.6.0: Imports depuis const_v06
+from .const_v06 import (
     DOMAIN, NAME, MANUFACTURER, HARD_CAP_W,
     CONF_PV_SENSOR, CONF_HOUSE_SENSOR, CONF_GRID_POWER_SENSOR, CONF_BATTERY_SENSOR,
     CONF_RESERVE_W, CONF_UNIT_POWER, CONF_CAP_MAX_W, CONF_DEGRADATION_PCT,
@@ -23,16 +24,17 @@ from .const import (
     DEF_RESERVE_W, DEF_UNIT_POWER, DEF_CAP_MAX_W, DEF_DEGRADATION_PCT, DEF_SMOOTHING_WINDOW,
     UNIT_W, UNIT_KW,
     S_SPVM_SURPLUS_VIRTUAL, S_SPVM_SURPLUS_NET_RAW, S_SPVM_SURPLUS_NET,
-    S_SPVM_GRID_POWER_AUTO, S_SPVM_EXPECTED_SIMILAR, S_SPVM_PV_EFFECTIVE_CAP_NOW_W, S_SPVM_EXPECTED_DEBUG,
+    S_SPVM_GRID_POWER_AUTO, S_SPVM_EXPECTED_PRODUCTION, S_SPVM_PV_EFFECTIVE_CAP_NOW_W, S_SPVM_EXPECTED_DEBUG,
     L_SURPLUS_VIRTUAL, L_SURPLUS_NET_RAW, L_SURPLUS_NET, L_GRID_POWER_AUTO,
-    L_EXPECTED_SIMILAR, L_PV_EFFECTIVE_CAP_NOW_W, L_EXPECTED_DEBUG,
+    L_EXPECTED_PRODUCTION, L_PV_EFFECTIVE_CAP_NOW_W, L_EXPECTED_DEBUG,
     ATTR_SOURCE, ATTR_PV_W, ATTR_PV_KW, ATTR_HOUSE_W, ATTR_BATTERY_W, ATTR_GRID_W,
     ATTR_RESERVE_W, ATTR_CAP_MAX_W, ATTR_CAP_LIMIT_W, ATTR_DEGRADATION_PCT,
     ATTR_NOTE, ATTR_SMOOTHED, ATTR_WINDOW_S,
     SOURCE_GRID_AUTO, SOURCE_SURPLUS_VIRTUAL, SOURCE_SURPLUS_NET,
     NOTE_RESERVE, NOTE_CAP, NOTE_HARD_CAP,
 )
-from .coordinator import SPVMCoordinator
+# ⚠️ CHANGEMENT v0.6.0: Import depuis coordinator_v06
+from .coordinator_v06 import SPVMCoordinator
 from .helpers import (
     state_to_float, convert_to_w, clamp, rolling_average,
     merge_config_options, format_timestamp
@@ -84,11 +86,6 @@ class ComputedPowerSensor(BaseSPVMSensor):
         self._attr_native_value = value
         self._attr_extra_state_attributes = attrs
         self.async_write_ha_state()
-        
-        # Notify downstream listeners
-        if hasattr(self, '_downstream_listeners'):
-            for listener in self._downstream_listeners:
-                listener.trigger_update()
 
     def _compute(self) -> tuple[float | None, dict[str, Any]]:
         return None, {}
@@ -152,21 +149,6 @@ class SurplusNetRawSensor(ComputedPowerSensor):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, surplus_sensor: SurplusVirtualSensor):
         super().__init__(hass, entry, S_SPVM_SURPLUS_NET_RAW, L_SURPLUS_NET_RAW, [])
         self.surplus_sensor = surplus_sensor
-        # Register self to be notified when surplus_virtual changes
-        self._upstream_sensor = surplus_sensor
-
-    async def async_added_to_hass(self) -> None:
-        """When added to hass, register as listener to upstream sensor."""
-        await super().async_added_to_hass()
-        # Subscribe to changes from surplus_virtual
-        if hasattr(self._upstream_sensor, '_downstream_listeners'):
-            self._upstream_sensor._downstream_listeners.append(self)
-        else:
-            self._upstream_sensor._downstream_listeners = [self]
-
-    def trigger_update(self) -> None:
-        """Called by upstream sensor when it updates."""
-        self._recompute()
 
     def _compute(self) -> tuple[float, dict[str, Any]]:
         surplus_v, _ = self.surplus_sensor._compute()
@@ -180,21 +162,6 @@ class SurplusNetSensor(ComputedPowerSensor):
         super().__init__(hass, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, [])
         self.raw_sensor = raw_sensor
         self._history: deque[float] = deque(maxlen=20)
-        # Register self to be notified when surplus_net_raw changes
-        self._upstream_sensor = raw_sensor
-
-    async def async_added_to_hass(self) -> None:
-        """When added to hass, register as listener to upstream sensor."""
-        await super().async_added_to_hass()
-        # Subscribe to changes from surplus_net_raw
-        if hasattr(self._upstream_sensor, '_downstream_listeners'):
-            self._upstream_sensor._downstream_listeners.append(self)
-        else:
-            self._upstream_sensor._downstream_listeners = [self]
-
-    def trigger_update(self) -> None:
-        """Called by upstream sensor when it updates."""
-        self._recompute()
 
     def _compute(self) -> tuple[float, dict[str, Any]]:
         net_raw, _ = self.raw_sensor._compute()
@@ -241,10 +208,11 @@ class PVEffectiveCapSensor(BaseSPVMSensor):
         self.async_write_ha_state()
 
 
-class ExpectedSimilarSensor(CoordinatorEntity, BaseSPVMSensor):
+# ⚠️ CHANGEMENT v0.6.0: Renommé de ExpectedSimilarSensor à ExpectedProductionSensor
+class ExpectedProductionSensor(CoordinatorEntity, BaseSPVMSensor):
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry):
         CoordinatorEntity.__init__(self, coordinator)
-        BaseSPVMSensor.__init__(self, entry, S_SPVM_EXPECTED_SIMILAR, L_EXPECTED_SIMILAR,
+        BaseSPVMSensor.__init__(self, entry, S_SPVM_EXPECTED_PRODUCTION, L_EXPECTED_PRODUCTION,
                                  UNIT_KW, SensorDeviceClass.POWER, SensorStateClass.MEASUREMENT)
 
     @property
@@ -257,18 +225,36 @@ class ExpectedSimilarSensor(CoordinatorEntity, BaseSPVMSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         if not self.coordinator.data:
             return {}
-        debug_info = self.coordinator.data.get("debug_info", {})
-        knn_config = self.coordinator.data.get("knn_config", {})
+        
+        # ⚠️ CHANGEMENT v0.6.0: Nouveaux attributs du modèle solaire
         return {
-            ATTR_SOURCE: "k-NN prediction",
+            ATTR_SOURCE: "solar_physics_model",
             "expected_w": self.coordinator.data.get("expected_w"),
-            "method": debug_info.get("method"),
-            "neighbors": debug_info.get("neighbors"),
-            "samples_total": debug_info.get("samples_total"),
-            "k": knn_config.get("k"),
-            "window_min_minutes": knn_config.get("window_min"),
-            "window_max_minutes": knn_config.get("window_max"),
-            "weights": knn_config.get("weights"),
+            "method": self.coordinator.data.get("method"),
+            "model_type": self.coordinator.data.get("model_type"),
+            # Position solaire
+            "solar_elevation": self.coordinator.data.get("solar_elevation"),
+            "solar_azimuth": self.coordinator.data.get("solar_azimuth"),
+            "solar_declination": self.coordinator.data.get("solar_declination"),
+            # Production
+            "theoretical_w": self.coordinator.data.get("theoretical_w"),
+            "theoretical_kw": self.coordinator.data.get("theoretical_kw"),
+            # Facteurs d'ajustement
+            "cloud_factor": self.coordinator.data.get("cloud_factor"),
+            "temperature_factor": self.coordinator.data.get("temperature_factor"),
+            "lux_factor": self.coordinator.data.get("lux_factor"),
+            # Config panneaux
+            "panel_tilt": self.coordinator.data.get("panel_tilt"),
+            "panel_azimuth": self.coordinator.data.get("panel_azimuth"),
+            "panel_peak_power": self.coordinator.data.get("panel_peak_power"),
+            # Horaires solaires
+            "sunrise": self.coordinator.data.get("sunrise"),
+            "sunset": self.coordinator.data.get("sunset"),
+            "solar_noon": self.coordinator.data.get("solar_noon"),
+            # Disponibilité capteurs
+            "cloud_sensor_available": self.coordinator.data.get("cloud_sensor_available"),
+            "temp_sensor_available": self.coordinator.data.get("temp_sensor_available"),
+            "lux_sensor_available": self.coordinator.data.get("lux_sensor_available"),
             "last_update": format_timestamp(datetime.now()),
         }
 
@@ -282,7 +268,7 @@ class ExpectedDebugSensor(CoordinatorEntity, BaseSPVMSensor):
     def native_value(self) -> str:
         if not self.coordinator.data:
             return "N/A"
-        return json.dumps(self.coordinator.data.get("debug_info", {}), indent=2)
+        return json.dumps(self.coordinator.data, indent=2)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -292,6 +278,9 @@ class ExpectedDebugSensor(CoordinatorEntity, BaseSPVMSensor):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    # ⚠️ CHANGEMENT v0.6.0: Import depuis const_v06
+    from .const_v06 import DOMAIN
+    
     coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     config = merge_config_options(entry.data, entry.options)
     pv_entity = config.get(CONF_PV_SENSOR)
@@ -310,7 +299,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entities.append(raw_sensor)
     entities.append(SurplusNetSensor(hass, entry, raw_sensor))
     entities.append(PVEffectiveCapSensor(hass, entry))
-    entities.append(ExpectedSimilarSensor(coordinator, entry))
+    # ⚠️ CHANGEMENT v0.6.0: Renommé de ExpectedSimilarSensor
+    entities.append(ExpectedProductionSensor(coordinator, entry))
     if debug_enabled:
         entities.append(ExpectedDebugSensor(coordinator, entry))
     async_add_entities(entities)
