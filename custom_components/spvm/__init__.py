@@ -12,8 +12,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 
 # ⚠️ CHANGEMENT v0.6.0: Imports depuis modules v06
-from .const_v06 import DOMAIN
-from .coordinator_v06 import SPVMCoordinator
+from .const import DOMAIN
+from .coordinator import SPVMCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
