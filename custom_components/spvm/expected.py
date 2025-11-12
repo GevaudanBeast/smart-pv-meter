@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const_v06 import (
+from .const import (
     CONF_CLOUD_SENSOR,
     CONF_LUX_SENSOR,
     CONF_PANEL_AZIMUTH,
