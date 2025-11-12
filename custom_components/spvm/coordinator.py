@@ -34,6 +34,8 @@ Number = Union[float, int]
 @dataclass
 class SPVMData:
     expected_w: float
+    yield_ratio_pct: Optional[float]
+    surplus_net_w: Optional[float]
     attrs: Dict[str, Any]
 
 
@@ -47,7 +49,7 @@ def _safe_float(state: Optional[State]) -> Optional[float]:
 
 
 class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
-    """Compute expected solar production (minimal v0.6.0)."""
+    """Compute expected solar production + KPIs (v0.6.1)."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.hass = hass
@@ -84,14 +86,13 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
 
         super().__init__(
             hass,
-            logger=_LOGGER,  # <- logger standard, pas d'adapter
+            logger=_LOGGER,
             name=f"{DOMAIN}-coordinator",
             update_interval=timedelta(seconds=self.update_interval_s),
         )
 
     async def _async_update_data(self) -> SPVMData:
-        """Compute expected production (W) with simple corrections."""
-
+        """Compute expected production (W) and KPIs."""
         # Read current states
         pv = _safe_float(self.hass.states.get(self.pv_entity))
         house = _safe_float(self.hass.states.get(self.house_entity))
@@ -104,23 +105,41 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
 
         if pv is None:
             raise UpdateFailed("pv_sensor has no numeric state")
+        if house is None:
+            # On préfère lever une erreur claire plutôt que de produire des valeurs fausses
+            raise UpdateFailed("house_sensor has no numeric state")
 
         # Convert PV to W if provided in kW
         pv_w = pv * KW_TO_W if self.unit_power == UNIT_KW else pv
+        house_w = house * KW_TO_W if self.unit_power == UNIT_KW else house  # homogénéité si user a mis kW pour les deux
 
-        # --- Minimal expected model ---
+        # --- Expected model (identique v0.6.0) ---
         expected_clear_w = float(min(max(pv_w, 0.0), float(self.cap_max_w)))
         deg_factor = max(0.0, 1.0 - float(self.degradation_pct) / 100.0)
         expected_after_deg = expected_clear_w * deg_factor
-
         if cloud is not None:
             c = min(max(cloud, 0.0), 100.0)
             expected_after_cloud = expected_after_deg * (1.0 - c / 100.0)
         else:
             expected_after_cloud = expected_after_deg
-
         expected_final_w = max(expected_after_cloud - float(self.reserve_w), 0.0)
         expected_final_w = min(expected_final_w, float(self.cap_max_w))
+
+        # --- Yield ratio (%): réelle / attendue ---
+        if expected_final_w > 1e-6:
+            yield_ratio_pct = max(0.0, (pv_w / expected_final_w) * 100.0)
+        else:
+            yield_ratio_pct = None  # indéfini si attente ~0
+
+        # --- Surplus net (W) ---
+        # Surplus "virtuel" = max(export, pv - house).
+        surplus_virtual = pv_w - house_w
+        if grid is not None:
+            # Convention fréquente: grid +import / -export -> export = -grid (>=0)
+            export_w = max(-(grid * (KW_TO_W if self.unit_power == UNIT_KW else 1.0)), 0.0)
+            surplus_virtual = max(surplus_virtual, export_w)
+        # Réserve Zendure (150 W) garantie
+        surplus_net_w = max(surplus_virtual - float(self.reserve_w), 0.0)
 
         attrs: Dict[str, Any] = {
             ATTR_MODEL_TYPE: NOTE_SOLAR_MODEL,
@@ -138,7 +157,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             "reserve_w": self.reserve_w,
             "cap_max_w": self.cap_max_w,
             ATTR_DEGRADATION_PCT: self.degradation_pct,
-            ATTR_NOTE: "Minimal clear-sky proxy with degradation + cloud + reserve; capped.",
+            ATTR_NOTE: "Expected=W (clear→degradation→cloud→reserve, capped). KPIs: yield_ratio %, surplus_net W.",
         }
 
         if grid is not None:
@@ -154,4 +173,9 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         if cloud is not None:
             attrs["cloud_now_pct"] = cloud
 
-        return SPVMData(expected_w=expected_final_w, attrs=attrs)
+        return SPVMData(
+            expected_w=float(expected_final_w),
+            yield_ratio_pct=yield_ratio_pct,
+            surplus_net_w=float(surplus_net_w),
+            attrs=attrs,
+        )
