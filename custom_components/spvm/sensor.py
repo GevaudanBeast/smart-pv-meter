@@ -145,7 +145,9 @@ class SurplusVirtualSensor(ComputedPowerSensor):
 
 class SurplusNetRawSensor(ComputedPowerSensor):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, surplus_sensor: SurplusVirtualSensor):
-        super().__init__(hass, entry, S_SPVM_SURPLUS_NET_RAW, L_SURPLUS_NET_RAW, [])
+        # Listen to surplus_virtual sensor changes
+        surplus_entity_id = f"sensor.{S_SPVM_SURPLUS_VIRTUAL}"
+        super().__init__(hass, entry, S_SPVM_SURPLUS_NET_RAW, L_SURPLUS_NET_RAW, [surplus_entity_id])
         self.surplus_sensor = surplus_sensor
 
     def _compute(self) -> tuple[float, dict[str, Any]]:
@@ -157,7 +159,9 @@ class SurplusNetRawSensor(ComputedPowerSensor):
 
 class SurplusNetSensor(ComputedPowerSensor):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, raw_sensor: SurplusNetRawSensor):
-        super().__init__(hass, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, [])
+        # Listen to surplus_net_raw sensor changes
+        raw_entity_id = f"sensor.{S_SPVM_SURPLUS_NET_RAW}"
+        super().__init__(hass, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, [raw_entity_id])
         self.raw_sensor = raw_sensor
         self._history: deque[float] = deque(maxlen=20)
 
