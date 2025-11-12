@@ -4,7 +4,9 @@
   "version": "0.6.0",
   "documentation": "https://github.com/GevaudanBeast/smart-pv-meter",
   "issue_tracker": "https://github.com/GevaudanBeast/smart-pv-meter/issues",
-  "codeowners": ["@GevaudanBeast"],
+  "codeowners": [
+    "@GevaudanBeast"
+  ],
   "config_flow": true,
   "requirements": [],
   "iot_class": "local_polling"
