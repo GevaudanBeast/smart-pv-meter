@@ -1,235 +1,277 @@
-# 🎯 SPVM v0.6.0 - COMPLET ET PRÊT !
+# 🎯 Smart PV Meter (SPVM) v0.6.3
 
-## ✅ Status : Tous les fichiers créés et prêts à déployer
+[![Version](https://img.shields.io/badge/version-0.6.3-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Félicitations ! La refonte complète de SPVM v0.6.0 avec modèle solaire physique est **100% terminée**.
-
-## 📦 Contenu du package v0.6.0
-
-Tous les fichiers suivants sont dans `/mnt/user-data/outputs/spvm_v0.6.0/` :
-
-### ✅ Modules Python (12 fichiers)
-1. **solar_model.py** - Nouveau module de calculs astronomiques (500 lignes)
-2. **const_v06.py** - Constantes mises à jour
-3. **expected_v06.py** - Nouveau calculateur basé sur solar_model
-4. **coordinator_v06.py** - Coordinateur simplifié
-5. **config_flow_v06.py** - Nouveau formulaire avec champs solaires
-6. **sensor_v06.py** - Capteurs adaptés pour v0.6.0
-7. **__init___v06.py** - Init adapté
-8. **diagnostics_v06.py** - Diagnostics adaptés
-
-### ✅ Traductions (2 fichiers)
-9. **en_v06.json** - Traductions anglaises mises à jour
-10. **fr_v06.json** - Traductions françaises mises à jour
-
-### ✅ Documentation (2 fichiers)
-11. **MIGRATION_V06.md** - Guide de migration et détails techniques
-12. **GUIDE_FINALISATION_V06.md** - Instructions de déploiement
-
-## 🚀 Installation rapide (3 étapes)
-
-### Étape 1 : Backup actuel
-```bash
-cd /config/custom_components/
-cp -r spvm spvm_backup_055
-```
-
-### Étape 2 : Remplacer les fichiers
-
-Dans ton dossier `/config/custom_components/spvm/` :
-
-```bash
-# 1. Copier les nouveaux modules
-cp solar_model.py /config/custom_components/spvm/
-
-# 2. Remplacer les fichiers existants
-mv const_v06.py /config/custom_components/spvm/const.py
-mv config_flow_v06.py /config/custom_components/spvm/config_flow.py
-mv coordinator_v06.py /config/custom_components/spvm/coordinator.py
-mv expected_v06.py /config/custom_components/spvm/expected.py
-mv sensor_v06.py /config/custom_components/spvm/sensor.py
-mv __init___v06.py /config/custom_components/spvm/__init__.py
-mv diagnostics_v06.py /config/custom_components/spvm/diagnostics.py
-mv en_v06.json /config/custom_components/spvm/translations/en.json
-mv fr_v06.json /config/custom_components/spvm/translations/fr.json
-
-# 3. Mettre à jour manifest.json
-# Changer "version": "0.5.5" en "version": "0.6.0"
-```
-
-### Étape 3 : Restart Home Assistant
-```bash
-# Via UI ou commande
-ha core restart
-```
-
-## ⚙️ Configuration requise
-
-Lors du premier démarrage ou reconfiguration, tu devras renseigner :
-
-### Capteurs obligatoires (comme avant)
-- `pv_sensor` : Ta production PV
-- `house_sensor` : Ta consommation
-
-### Nouveaux paramètres solaires
-- `panel_peak_power` : **3000 W** (ta puissance crête)
-- `panel_tilt` : **30°** (inclinaison, à ajuster selon ton installation)
-- `panel_azimuth` : **180°** (Sud, à ajuster selon ton installation)
-- `site_latitude` : **43.5297** (Aix-en-Provence par défaut)
-- `site_longitude` : **5.4474** (Aix-en-Provence par défaut)
-- `site_altitude` : **200 m** (altitude de ton site)
-- `system_efficiency` : **0.85** (85%, pertes onduleur/câbles/poussière)
-
-### Capteurs météo optionnels (recommandés)
-- `lux_sensor` : Luminosité extérieure
-- `temp_sensor` : Température extérieure
-- `cloud_sensor` : Couverture nuageuse si disponible
-
-## 📊 Résultat attendu
-
-Après l'installation, tu auras les mêmes capteurs qu'avant :
-
-### Capteurs de surplus (inchangés)
-- ✅ `sensor.spvm_surplus_net` → **À utiliser pour Solar Optimizer**
-- ✅ `sensor.spvm_surplus_virtual`
-- ✅ `sensor.spvm_surplus_net_raw`
-- ✅ `sensor.spvm_grid_power_auto`
-- ✅ `sensor.spvm_pv_effective_cap_now_w`
-
-### Capteur de prédiction (nouveau nom)
-- ⚡ `sensor.spvm_expected_production` (avant: `expected_similar`)
-  - State : Production attendue en kW
-  - Attributs : Position solaire, facteurs météo, horaires soleil
-
-## 🔍 Vérification
-
-### Test 1 : Capteurs créés
-```
-Développeur → États → Filtrer "spvm"
-→ Tu dois voir tous les capteurs listés ci-dessus
-```
-
-### Test 2 : Production attendue
-```
-sensor.spvm_expected_production
-→ Doit afficher 0 kW la nuit
-→ Doit afficher >0 kW en journée avec soleil
-→ Attributs doivent contenir solar_elevation, sunrise, sunset
-```
-
-### Test 3 : Surplus pour Solar Optimizer
-```
-sensor.spvm_surplus_net
-→ Doit afficher une valeur cohérente
-→ Doit avoir les attributs reserve_w=150, cap_max_w=3000
-```
-
-## 💡 Avantages de la v0.6.0
-
-### Performances
-- ⚡ **Calculs instantanés** (< 1s vs 5-10s avec k-NN)
-- 🧠 **Mémoire réduite** (< 5 MB vs 50-100 MB avec k-NN)
-- 🚀 **Démarrage immédiat** (plus besoin d'attendre 3 ans de données)
-
-### Précision
-- ☀️ **Physique solaire** (calculs astronomiques précis)
-- 🌤️ **Ajustements météo** (nuages, température, luminosité)
-- 🔧 **Paramètres ajustables** (tu peux optimiser selon ton installation)
-
-### Simplicité
-- 📖 **Code lisible** (500 lignes de solar_model.py vs 400 lignes de k-NN)
-- 🎯 **Pas de cache** (pas de complexité de gestion mémoire)
-- 🔍 **Debugging facile** (tous les calculs sont explicites)
-
-## 🎛️ Optimisation post-installation
-
-Une fois installé, tu pourras ajuster :
-
-1. **`system_efficiency`** (0.5-1.0)
-   - Commence à 0.85
-   - Augmente si production réelle > prédiction
-   - Diminue si production réelle < prédiction
-
-2. **`panel_tilt`** et **`panel_azimuth`**
-   - Mesure l'inclinaison et orientation réelles de tes panneaux
-   - Ajuste dans la config pour meilleure précision
-
-3. **Capteurs météo**
-   - Ajoute `cloud_sensor` si tu as une station météo
-   - Active `lux_sensor` et `temp_sensor` pour ajustements fins
-
-## 📞 Support
-
-### Logs à consulter
-```bash
-# Logs Home Assistant
-tail -f /config/home-assistant.log | grep spvm
-
-# Logs au démarrage
-cat /config/home-assistant.log | grep "SPVM\|solar_model"
-```
-
-### Messages normaux au démarrage
-```
-INFO: Solar model initialized (lat=43.5297, lon=5.4474, tz=Europe/Paris)
-INFO: SPVM Coordinator initialized with solar model (update_interval=60s)
-DEBUG: SPVM async_setup_entry (version=0.6.0, entry_id=...)
-```
-
-### Erreurs possibles
-
-**"ModuleNotFoundError: solar_model"**
-→ Fichier `solar_model.py` pas copié
-
-**"KeyError: CONF_PANEL_PEAK_POWER"**
-→ Fichier `const.py` pas remplacé par `const_v06.py`
-
-**"Expected production always 0"**
-→ Vérifier latitude/longitude et heure système
-
-## 🎉 C'est tout !
-
-Ta version v0.6.0 est **100% prête**.
-
-Le passage de k-NN au modèle solaire est une **refonte majeure** qui va :
-- ✅ Simplifier ton setup (plus besoin de 3 ans de données)
-- ✅ Accélérer les calculs (instantané)
-- ✅ Améliorer la stabilité (pas de cache à gérer)
-- ✅ Permettre l'optimisation manuelle (ajustement des paramètres)
-
-**Solar Optimizer** continuera de fonctionner parfaitement avec `sensor.spvm_surplus_net` qui reste identique.
+**Smart PV Meter** is a Home Assistant integration that calculates expected solar production using a physical solar model based on astronomical calculations. It provides accurate predictions and surplus calculations for solar optimizers.
 
 ---
 
-## 📂 Structure finale
+## ✨ Features
 
+### 🌞 Physical Solar Model
+- **NOAA-style sun position** calculations (elevation, azimuth, declination)
+- **Clear-sky irradiance** modeling with atmospheric transmittance
+- **Plane-of-array (POA)** projection using incidence angle
+- **Weather adjustments** (cloud coverage, temperature derating)
+- **No external dependencies** - pure Python implementation
+
+### 📊 Sensors
+- `sensor.spvm_expected_production` - Expected solar production (W)
+- `sensor.spvm_yield_ratio` - Performance ratio (actual / expected × 100%)
+- `sensor.spvm_surplus_net` - Net surplus for solar optimizers (W)
+
+### ⚡ Performance
+- **Instant calculations** (< 1s vs 5-10s with legacy k-NN)
+- **Low memory** (< 5 MB vs 50-100 MB with k-NN)
+- **No historical data required** (works immediately)
+- **Real-time updates** (configurable interval)
+
+---
+
+## 📦 Installation
+
+### HACS (Recommended)
+1. Open HACS in Home Assistant
+2. Click "Integrations"
+3. Click the three dots menu → "Custom repositories"
+4. Add: `https://github.com/GevaudanBeast/smart-pv-meter`
+5. Category: Integration
+6. Search for "Smart PV Meter" and install
+
+### Manual Installation
+```bash
+cd /config/custom_components/
+git clone https://github.com/GevaudanBeast/smart-pv-meter.git spvm
 ```
-custom_components/spvm/
-├── __init__.py                 ✅ Adapté pour v0.6.0
-├── config_flow.py              ✅ Nouveau formulaire
-├── const.py                    ✅ Nouvelles constantes
-├── coordinator.py              ✅ Simplifié
-├── diagnostics.py              ✅ Adapté
-├── expected.py                 ✅ Utilise solar_model
-├── helpers.py                  ✅ Inchangé (garder l'ancien)
-├── manifest.json               ⚠️ Bumper version à 0.6.0
-├── sensor.py                   ✅ Adapté
-├── services.yaml               ✅ Inchangé (garder l'ancien)
-├── solar_model.py              🆕 NOUVEAU MODULE
-├── strings.json                ✅ Inchangé (garder l'ancien)
-├── icon.png                    ✅ Inchangé (garder l'ancien)
-├── logo.png                    ✅ Inchangé (garder l'ancien)
-└── translations/
-    ├── en.json                 ✅ Mis à jour
-    └── fr.json                 ✅ Mis à jour
+
+Then restart Home Assistant.
+
+---
+
+## ⚙️ Configuration
+
+### 1. Add Integration
+**Settings** → **Devices & Services** → **Add Integration** → Search "Smart PV Meter"
+
+### 2. Required Sensors
+- **PV production sensor** - Your solar production power sensor
+- **House consumption sensor** - Your house consumption power sensor
+
+### 3. Optional Sensors (Recommended)
+- **Grid power sensor** - Grid import/export (+/−)
+- **Battery sensor** - Battery charge/discharge (+/−)
+- **Brightness sensor (lux)** - For better cloud detection
+- **Temperature sensor** - For temperature derating
+- **Cloud coverage sensor** - Direct cloud percentage (0-100%)
+
+### 4. Solar Parameters
+Configure your solar installation:
+
+| Parameter | Description | Example | Range |
+|-----------|-------------|---------|-------|
+| `panel_peak_power` | Panel peak power | 2800 W | 100-20000 W |
+| `panel_tilt` | Panel tilt angle | 30° | 0-90° |
+| `panel_azimuth` | Panel orientation | 180° (South) | 0-360° |
+| `site_latitude` | Installation latitude | 48.8566° | -90 to 90° |
+| `site_longitude` | Installation longitude | 2.3522° | -180 to 180° |
+| `site_altitude` | Altitude above sea level | 35 m | -500 to 6000 m |
+| `system_efficiency` | System efficiency | 0.85 (85%) | 0.5-1.0 |
+
+**Note:** Latitude/longitude/altitude default to your Home Assistant location if not specified.
+
+### 5. Advanced Settings
+- **Reserve (W)** - Battery reserve to keep (default: 150W)
+- **Cap max (W)** - Hard power cap (default: 3000W)
+- **Degradation (%)** - Panel aging/degradation (default: 0%)
+- **Update interval** - Sensor update frequency (default: 60s)
+
+---
+
+## 🧪 Diagnostic Guide
+
+If your sensors show **0W** or **"unknown"**, see [DIAGNOSTIC.md](DIAGNOSTIC.md) for troubleshooting.
+
+### Quick Diagnostic Script
+
+Create `/config/spvm_diagnostic.py`:
+```python
+#!/usr/bin/env python3
+import sys
+sys.path.insert(0, '/config/custom_components/spvm')
+
+from datetime import datetime, timezone
+from solar_model import SolarInputs, compute as solar_compute
+
+now_utc = datetime.now(timezone.utc)
+inputs = SolarInputs(
+    dt_utc=now_utc,
+    lat_deg=48.8566,      # ⬅️ YOUR LATITUDE
+    lon_deg=2.3522,       # ⬅️ YOUR LONGITUDE
+    altitude_m=35.0,      # ⬅️ YOUR ALTITUDE
+    panel_tilt_deg=30.0,  # ⬅️ YOUR PANEL TILT
+    panel_azimuth_deg=180.0,  # ⬅️ YOUR ORIENTATION
+    panel_peak_w=2800.0,  # ⬅️ YOUR PEAK POWER
+    system_efficiency=0.85,
+    cloud_pct=None,
+    temp_c=None,
+)
+
+model = solar_compute(inputs)
+print(f"Sun elevation: {model.elevation_deg:.2f}° ({'DAY' if model.elevation_deg > 0 else 'NIGHT'})")
+print(f"Expected production: {model.expected_corrected_w:.1f}W")
 ```
 
-## 🚦 Prochaine étape : Tester !
+Run: `python3 /config/spvm_diagnostic.py`
 
-1. **Installe** en suivant les 3 étapes ci-dessus
-2. **Configure** avec tes paramètres (panneaux, localisation)
-3. **Vérifie** que `sensor.spvm_expected_production` affiche une valeur
-4. **Attends** 24h pour voir l'évolution sur une journée complète
-5. **Ajuste** `system_efficiency` si nécessaire
+---
 
-Bonne installation ! 🎊
+## 📊 Sensor Attributes
+
+Each sensor includes detailed attributes for monitoring and debugging:
+
+```yaml
+sensor.spvm_expected_production:
+  state: 1250.5  # W
+  attributes:
+    model_elevation_deg: 45.23  # Sun elevation
+    model_azimuth_deg: 180.45   # Sun direction
+    model_declination_deg: -12.34
+    model_incidence_deg: 23.45  # Angle of incidence
+    ghi_clear_wm2: 823.4        # Global horizontal irradiance
+    poa_clear_wm2: 956.2        # Plane-of-array irradiance
+    site:
+      lat: 48.8566
+      lon: 2.3522
+      alt_m: 35.0
+    panel:
+      tilt_deg: 30.0
+      azimuth_deg: 180.0
+      peak_w: 2800.0
+    system_efficiency: 0.85
+    reserve_w: 150
+    cap_max_w: 3000
+```
+
+---
+
+## 🔧 Usage with Solar Optimizer
+
+SPVM is designed to work seamlessly with solar optimizers:
+
+```yaml
+# Use sensor.spvm_surplus_net for your solar optimizer
+automation:
+  - alias: "Solar Optimizer Control"
+    trigger:
+      - platform: state
+        entity_id: sensor.spvm_surplus_net
+    action:
+      - service: number.set_value
+        target:
+          entity_id: number.solar_optimizer_power
+        data:
+          value: "{{ states('sensor.spvm_surplus_net') | float }}"
+```
+
+---
+
+## 📈 Optimization Tips
+
+### 1. Tune System Efficiency
+Start with `0.85` and adjust based on actual vs expected production:
+- **Expected > Actual** → Decrease efficiency (e.g., 0.80)
+- **Expected < Actual** → Increase efficiency (e.g., 0.90)
+
+### 2. Verify Panel Parameters
+- Measure actual tilt and azimuth of your panels
+- Check peak power matches your installation
+- Consider shading and dust (reduce efficiency)
+
+### 3. Add Weather Sensors
+- **Brightness (lux)** - Improves cloud detection
+- **Temperature** - Enables temperature derating
+- **Cloud coverage** - Direct cloud percentage
+
+### 4. Monitor Yield Ratio
+The yield ratio shows performance:
+- **90-110%** - Normal range
+- **> 110%** - Better than expected (cold weather, clean panels)
+- **< 90%** - Worse than expected (check configuration)
+
+---
+
+## 🐛 Troubleshooting
+
+### Expected production always 0W during daytime
+
+**Cause:** Bug in solar position calculation (fixed in v0.6.3)
+
+**Solution:** Update to v0.6.3 or later
+
+### Configuration menu not accessible
+
+**Cause:** Bug in config flow (fixed in v0.6.3)
+
+**Solution:** Update to v0.6.3 or later
+
+### Sensors show "unknown"
+
+**Possible causes:**
+1. Sun is below horizon (normal at night)
+2. Required sensors (PV/house) unavailable
+3. Configuration error
+
+**Solution:** Check [DIAGNOSTIC.md](DIAGNOSTIC.md)
+
+---
+
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
+
+### Version 0.6.3 (Current - November 2025)
+- 🐛 **CRITICAL FIX:** Solar position calculation bug
+- 🐛 Fixed 400 Bad Request in config flow
+- 🐛 Fixed 500 Internal Server Error
+- 🐛 Fixed diagnostics coordinator access
+- 🏷️ Shorter entity names (English)
+- 📖 Added diagnostic guide
+
+### Version 0.6.0 (November 2025)
+- 🆕 Physical solar model (NOAA calculations)
+- ⚡ 10x faster than k-NN model
+- 💾 95% less memory usage
+- 🎯 No historical data required
+
+---
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+---
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) file
+
+---
+
+## 🙏 Acknowledgments
+
+- Home Assistant community
+- NOAA for solar calculation algorithms
+- Contributors and beta testers
+
+---
+
+## 📞 Support
+
+- **Issues:** [GitHub Issues](https://github.com/GevaudanBeast/smart-pv-meter/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/GevaudanBeast/smart-pv-meter/discussions)
+
+---
+
+**Smart PV Meter v0.6.3** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)
