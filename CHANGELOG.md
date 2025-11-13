@@ -74,6 +74,8 @@
 - `2104cf6` - feat: Add per-sensor unit configuration (W vs kW) ⭐
 - `2e02557` - docs: Update CHANGELOG for per-sensor unit configuration feature
 - `320642c` - feat: Reorganize config UI for better clarity
+- `323a55e` - docs: Update CHANGELOG for UI reorganization
+- `b6097f8` - docs: Update documentation for v0.6.3 features
 
 ---
 
