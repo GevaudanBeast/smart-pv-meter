@@ -3,12 +3,21 @@
 ## 🐛 Version 0.6.3 - Hotfix (November 2025)
 
 ### Corrections de bugs
-- ✅ **Fix critique** : Correction de l'erreur "400: Bad Request" lors du chargement du flux de configuration
+- ✅ **Fix critique 1** : Correction de l'erreur "400: Bad Request" lors du chargement du flux de configuration
+- ✅ **Fix critique 2** : Correction de l'erreur "500 Internal Server Error" due aux fonctions de coercition non sérialisables
+- ✅ **Fix syntaxe** : Correction de la SyntaxError dans les fonctions helper inutilisées
 - ✅ **Options restaurées** : Le menu "Configurer" est de nouveau accessible dans les paramètres de l'intégration
-- 🔧 **Cause** : La fonction `async_get_options_flow` devait être une méthode statique de la classe `SPVMConfigFlow` au lieu d'une fonction au niveau du module
+
+### Causes des problèmes
+- La fonction `async_get_options_flow` devait être une méthode statique de la classe `SPVMConfigFlow` au lieu d'une fonction au niveau du module
+- Les fonctions personnalisées `_coerce_float` et `_coerce_int` ne pouvaient pas être sérialisées par `voluptuous_serialize`
+- Syntaxe invalide dans les fonctions helper `req_entity` et `opt_entity`
 
 ### Fichiers modifiés
 - `config_flow.py` : Déplacement de `async_get_options_flow` dans la classe `SPVMConfigFlow`
+- `config_flow.py` : Remplacement des fonctions de coercition personnalisées par `vol.Coerce(float)` et `vol.Coerce(int)`
+- `config_flow.py` : Suppression des fonctions helper inutilisées avec syntaxe invalide
+- `.gitignore` : Ajout pour ignorer les fichiers cache Python
 
 ---
 

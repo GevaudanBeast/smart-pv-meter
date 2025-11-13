@@ -39,28 +39,6 @@ ALL_KEYS = (
 def _ent_sel() -> EntitySelector:
     return EntitySelector(EntitySelectorConfig(domain=["sensor"]))
 
-def _coerce_float(v):
-    if v in (None, "", "unknown", "unavailable"):
-        return vol.UNDEFINED
-    try:
-        return float(v)
-    except Exception:
-        raise vol.Invalid("must_be_number")
-
-def _coerce_int(v):
-    if v in (None, "", "unknown", "unavailable"):
-        return vol.UNDEFINED
-    try:
-        return int(float(v))
-    except Exception:
-        raise vol.Invalid("must_be_int")
-
-def _coerce_choice(v, allowed: list[str]):
-    if v in (None, "", "unknown", "unavailable"):
-        return vol.UNDEFINED
-    if v not in allowed:
-        raise vol.Invalid("invalid_choice")
-    return v
 
 def _merge_defaults(hass: HomeAssistant, cur: dict | None) -> dict:
     d = dict(cur or {})
@@ -122,16 +100,16 @@ def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
         curv = v.get(key, default_val)
         # pas de default si encore indéfini
         if curv in (None, "", vol.UNDEFINED):
-            schema[vol.Optional(key)] = _coerce_float
+            schema[vol.Optional(key)] = vol.Coerce(float)
         else:
-            schema[vol.Optional(key, default=curv)] = _coerce_float
+            schema[vol.Optional(key, default=curv)] = vol.Coerce(float)
 
     def opt_int(key, default_val):
         curv = v.get(key, default_val)
         if curv in (None, "", vol.UNDEFINED):
-            schema[vol.Optional(key)] = _coerce_int
+            schema[vol.Optional(key)] = vol.Coerce(int)
         else:
-            schema[vol.Optional(key, default=curv)] = _coerce_int
+            schema[vol.Optional(key, default=curv)] = vol.Coerce(int)
 
     # Modèle solaire
     opt_num(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER)
@@ -144,19 +122,19 @@ def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
     alt_default = v.get(CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE)
 
     if lat_default in (None, "", vol.UNDEFINED):
-        schema[vol.Optional(CONF_SITE_LATITUDE)] = _coerce_float
+        schema[vol.Optional(CONF_SITE_LATITUDE)] = vol.Coerce(float)
     else:
-        schema[vol.Optional(CONF_SITE_LATITUDE, default=lat_default)] = _coerce_float
+        schema[vol.Optional(CONF_SITE_LATITUDE, default=lat_default)] = vol.Coerce(float)
 
     if lon_default in (None, "", vol.UNDEFINED):
-        schema[vol.Optional(CONF_SITE_LONGITUDE)] = _coerce_float
+        schema[vol.Optional(CONF_SITE_LONGITUDE)] = vol.Coerce(float)
     else:
-        schema[vol.Optional(CONF_SITE_LONGITUDE, default=lon_default)] = _coerce_float
+        schema[vol.Optional(CONF_SITE_LONGITUDE, default=lon_default)] = vol.Coerce(float)
 
     if alt_default in (None, "", vol.UNDEFINED):
-        schema[vol.Optional(CONF_SITE_ALTITUDE)] = _coerce_float
+        schema[vol.Optional(CONF_SITE_ALTITUDE)] = vol.Coerce(float)
     else:
-        schema[vol.Optional(CONF_SITE_ALTITUDE, default=alt_default)] = _coerce_float
+        schema[vol.Optional(CONF_SITE_ALTITUDE, default=alt_default)] = vol.Coerce(float)
 
     opt_num(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY)
 
