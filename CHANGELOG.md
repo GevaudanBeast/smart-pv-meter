@@ -28,6 +28,13 @@
 - `sensor.py` : Mise à jour de la version
 - `.gitignore` : Ajout pour ignorer les fichiers cache Python
 
+### Améliorations
+- 🏷️ **Noms d'entités courts** : Les entités utilisent maintenant des noms courts
+  - `sensor.spvm_production_attendue` au lieu de `sensor.smart_pv_meter_spvm_production_attendue`
+  - `sensor.spvm_rendement` au lieu de `sensor.smart_pv_meter_spvm_rendement`
+  - `sensor.spvm_surplus_net` au lieu de `sensor.smart_pv_meter_spvm_surplus_net`
+- 📖 **Guide de diagnostic** : Ajout de DIAGNOSTIC.md pour comprendre les valeurs à 0W
+
 ### Commits
 - `ef548eb` - fix: Move async_get_options_flow to SPVMConfigFlow class
 - `b4bd0f5` - chore(release): v0.6.3
@@ -35,6 +42,7 @@
 - `bef925f` - chore: Add .gitignore to ignore Python cache files
 - `41de04a` - fix: Use vol.Coerce instead of custom coercion functions
 - `d579907` - fix: Critical diagnostics bug and code cleanup
+- `317964d` - docs: Update CHANGELOG and translations for v0.6.3
 
 ---
 
