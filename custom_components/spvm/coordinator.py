@@ -164,10 +164,17 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         yield_ratio_pct = (pv_w / expected_w) * 100.0 if expected_w > 1e-6 else None
 
         surplus_virtual = pv_w - house_w
+        _LOGGER.debug(
+            f"SPVM surplus calculation: pv_w={pv_w:.1f}W, house_w={house_w:.1f}W, "
+            f"surplus_virtual={surplus_virtual:.1f}W, reserve={self.reserve_w}W"
+        )
         if grid_w is not None:
             export_w = max(-grid_w, 0.0)  # grid +import/-export
+            _LOGGER.debug(f"SPVM grid_w={grid_w:.1f}W, export_w={export_w:.1f}W")
             surplus_virtual = max(surplus_virtual, export_w)
+            _LOGGER.debug(f"SPVM surplus_virtual after grid adjustment: {surplus_virtual:.1f}W")
         surplus_net_w = max(surplus_virtual - float(self.reserve_w), 0.0)
+        _LOGGER.debug(f"SPVM surplus_net_w final: {surplus_net_w:.1f}W")
 
         attrs: Dict[str, Any] = {
             ATTR_MODEL_TYPE: NOTE_SOLAR_MODEL,
@@ -193,6 +200,9 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             "model_incidence_deg": model.incidence_deg,
             "ghi_clear_wm2": model.ghi_clear_wm2,
             "poa_clear_wm2": model.poa_clear_wm2,
+            "debug_pv_w": round(pv_w, 1),
+            "debug_house_w": round(house_w, 1),
+            "debug_surplus_virtual": round(surplus_virtual, 1),
             ATTR_NOTE: "Physical clear-sky + incidence; cloud & temp corrections; then degradation, reserve, cap.",
         }
         if grid is not None:
