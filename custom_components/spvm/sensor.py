@@ -59,7 +59,7 @@ class _Base(CoordinatorEntity[SPVMCoordinator], SensorEntity):
 
 class SPVMExpectedProduction(_Base):
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, S_SPVM_EXPECTED_PRODUCTION, L_EXPECTED_PRODUCTION, "production_attendue")
+        super().__init__(coordinator, entry, S_SPVM_EXPECTED_PRODUCTION, L_EXPECTED_PRODUCTION, "expected_production")
         self._attr_native_unit_of_measurement = UNIT_W
         self._attr_device_class = "power"
 
@@ -73,7 +73,7 @@ class SPVMExpectedProduction(_Base):
 
 class SPVMYieldRatio(_Base):
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, S_SPVM_YIELD_RATIO, L_YIELD_RATIO, "rendement")
+        super().__init__(coordinator, entry, S_SPVM_YIELD_RATIO, L_YIELD_RATIO, "yield_ratio")
         self._attr_native_unit_of_measurement = UNIT_PERCENT
 
     @property

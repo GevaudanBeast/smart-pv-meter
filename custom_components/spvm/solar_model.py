@@ -83,7 +83,7 @@ def _sun_position(dt: datetime, lat_deg: float, lon_deg: float):
     dec = math.asin(Z)     # radians
 
     # Equation of time (approx)
-    EoT = 4 * math.degrees(q - math.degrees(RA))  # minutes
+    EoT = 4 * (q - math.degrees(RA))  # minutes
 
     # Solar time
     utc_hours = dt.hour + dt.minute / 60.0 + dt.second / 3600.0
