@@ -15,7 +15,7 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Retourner les diagnostics pour une config entry."""
-    coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator: SPVMCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     diagnostics = {
         "entry_id": entry.entry_id,

@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configurer Smart PV Meter v0.6.0",
+        "title": "Configurer Smart PV Meter v0.6.3",
         "description": "Configure votre Smart PV Meter avec modèle solaire physique. Entités créées: sensor.spvm_grid_power_auto, sensor.spvm_surplus_virtual, sensor.spvm_surplus_net_raw, sensor.spvm_surplus_net (à utiliser pour Solar Optimizer), sensor.spvm_pv_effective_cap_now_w, sensor.spvm_expected_production",
         "data": {
           "pv_sensor": "Capteur de production PV (puissance)",
@@ -35,7 +35,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configurer les options SPVM v0.6.0",
+        "title": "Configurer les options SPVM v0.6.3",
         "description": "Modifier les capteurs et paramètres (modèle solaire)",
         "data": {
           "pv_sensor": "Capteur production PV",
