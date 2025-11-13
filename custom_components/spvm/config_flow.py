@@ -91,18 +91,6 @@ def _merge_defaults(hass: HomeAssistant, cur: dict | None) -> dict:
 
 def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
     v = _merge_defaults(hass, cur)
-
-    # Helpers pour éviter default=None : on n’ajoute un default que si défini
-    def req_entity(key):
-        if key in v and v[key]:
-            return vol.Required(key, default=v[key]): _ent_sel()
-        return vol.Required(key): _ent_sel()
-
-    def opt_entity(key):
-        if key in v and v[key]:
-            return vol.Optional(key, default=v[key]): _ent_sel()
-        return vol.Optional(key): _ent_sel()
-
     schema = {}
 
     # Requis
