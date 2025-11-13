@@ -30,13 +30,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class _Base(CoordinatorEntity[SPVMCoordinator], SensorEntity):
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False  # Noms courts: sensor.spvm_xxx
 
-    def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry, unique_suffix: str, name: str) -> None:
+    def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry, unique_suffix: str, name: str, entity_id_suffix: str) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}-{unique_suffix}"
         self._attr_name = name
+        # Suggestion d'entity_id court
+        self._attr_suggested_object_id = f"spvm_{entity_id_suffix}"
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -57,7 +59,7 @@ class _Base(CoordinatorEntity[SPVMCoordinator], SensorEntity):
 
 class SPVMExpectedProduction(_Base):
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, S_SPVM_EXPECTED_PRODUCTION, L_EXPECTED_PRODUCTION)
+        super().__init__(coordinator, entry, S_SPVM_EXPECTED_PRODUCTION, L_EXPECTED_PRODUCTION, "production_attendue")
         self._attr_native_unit_of_measurement = UNIT_W
         self._attr_device_class = "power"
 
@@ -71,7 +73,7 @@ class SPVMExpectedProduction(_Base):
 
 class SPVMYieldRatio(_Base):
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, S_SPVM_YIELD_RATIO, L_YIELD_RATIO)
+        super().__init__(coordinator, entry, S_SPVM_YIELD_RATIO, L_YIELD_RATIO, "rendement")
         self._attr_native_unit_of_measurement = UNIT_PERCENT
 
     @property
@@ -84,7 +86,7 @@ class SPVMYieldRatio(_Base):
 
 class SPVMSurplusNet(_Base):
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET)
+        super().__init__(coordinator, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, "surplus_net")
         self._attr_native_unit_of_measurement = UNIT_W
         self._attr_device_class = "power"
 
