@@ -27,10 +27,20 @@ UNIT_C: Final = "°C"
 UNIT_F: Final = "°F"
 UNIT_PERCENT: Final = "%"
 
-CONF_UNIT_POWER: Final = "unit_power"                   # "W" | "kW"
+CONF_UNIT_POWER: Final = "unit_power"                   # "W" | "kW" (legacy global)
 CONF_UNIT_TEMP: Final = "unit_temp"                     # "°C" | "°F"
 DEF_UNIT_POWER: Final = UNIT_W
 DEF_UNIT_TEMP: Final = UNIT_C
+
+# Unités par capteur (v0.6.3+)
+CONF_UNIT_PV: Final = "unit_pv"                         # "W" | "kW"
+CONF_UNIT_HOUSE: Final = "unit_house"                   # "W" | "kW"
+CONF_UNIT_GRID: Final = "unit_grid"                     # "W" | "kW"
+CONF_UNIT_BATTERY: Final = "unit_battery"               # "W" | "kW"
+DEF_UNIT_PV: Final = UNIT_W
+DEF_UNIT_HOUSE: Final = UNIT_W
+DEF_UNIT_GRID: Final = UNIT_W
+DEF_UNIT_BATTERY: Final = UNIT_W
 
 # Réserve / plafonds / vieillissement
 CONF_RESERVE_W: Final = "reserve_w"

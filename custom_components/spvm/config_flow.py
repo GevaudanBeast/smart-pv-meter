@@ -12,6 +12,8 @@ from .const import (
     CONF_LUX_SENSOR, CONF_TEMP_SENSOR, CONF_HUM_SENSOR, CONF_CLOUD_SENSOR,
     # units
     CONF_UNIT_POWER, CONF_UNIT_TEMP, DEF_UNIT_POWER, DEF_UNIT_TEMP, UNIT_W, UNIT_KW, UNIT_C, UNIT_F,
+    CONF_UNIT_PV, CONF_UNIT_HOUSE, CONF_UNIT_GRID, CONF_UNIT_BATTERY,
+    DEF_UNIT_PV, DEF_UNIT_HOUSE, DEF_UNIT_GRID, DEF_UNIT_BATTERY,
     # reserve/cap/age
     CONF_RESERVE_W, DEF_RESERVE_W, CONF_CAP_MAX_W, DEF_CAP_MAX_W, CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT,
     # solar model
@@ -29,6 +31,7 @@ ALL_KEYS = (
     CONF_PV_SENSOR, CONF_HOUSE_SENSOR, CONF_GRID_POWER_SENSOR, CONF_BATTERY_SENSOR,
     CONF_LUX_SENSOR, CONF_TEMP_SENSOR, CONF_HUM_SENSOR, CONF_CLOUD_SENSOR,
     CONF_UNIT_POWER, CONF_UNIT_TEMP,
+    CONF_UNIT_PV, CONF_UNIT_HOUSE, CONF_UNIT_GRID, CONF_UNIT_BATTERY,
     CONF_PANEL_PEAK_POWER, CONF_PANEL_TILT, CONF_PANEL_AZIMUTH,
     CONF_SITE_LATITUDE, CONF_SITE_LONGITUDE, CONF_SITE_ALTITUDE,
     CONF_SYSTEM_EFFICIENCY,
@@ -56,6 +59,12 @@ def _merge_defaults(hass: HomeAssistant, cur: dict | None) -> dict:
     # Hard defaults for safe display (without ever passing None)
     d.setdefault(CONF_UNIT_POWER, DEF_UNIT_POWER)
     d.setdefault(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
+    # Per-sensor units (default to legacy global unit for backward compat)
+    legacy_unit = d.get(CONF_UNIT_POWER, DEF_UNIT_POWER)
+    d.setdefault(CONF_UNIT_PV, legacy_unit)
+    d.setdefault(CONF_UNIT_HOUSE, legacy_unit)
+    d.setdefault(CONF_UNIT_GRID, legacy_unit)
+    d.setdefault(CONF_UNIT_BATTERY, legacy_unit)
     d.setdefault(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER)
     d.setdefault(CONF_PANEL_TILT, DEF_PANEL_TILT)
     d.setdefault(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH)
@@ -89,11 +98,17 @@ def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
         else:
             schema[vol.Optional(key)] = _ent_sel()
 
-    # Unités (choices simples, sans default=None)
+    # Unités globales (legacy, conservé pour compatibilité)
     up = v.get(CONF_UNIT_POWER, DEF_UNIT_POWER)
     ut = v.get(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
     schema[vol.Optional(CONF_UNIT_POWER, default=up)] = vol.In([UNIT_W, UNIT_KW])
     schema[vol.Optional(CONF_UNIT_TEMP, default=ut)] = vol.In([UNIT_C, UNIT_F])
+
+    # Unités par capteur (v0.6.3+)
+    schema[vol.Optional(CONF_UNIT_PV, default=v.get(CONF_UNIT_PV, DEF_UNIT_PV))] = vol.In([UNIT_W, UNIT_KW])
+    schema[vol.Optional(CONF_UNIT_HOUSE, default=v.get(CONF_UNIT_HOUSE, DEF_UNIT_HOUSE))] = vol.In([UNIT_W, UNIT_KW])
+    schema[vol.Optional(CONF_UNIT_GRID, default=v.get(CONF_UNIT_GRID, DEF_UNIT_GRID))] = vol.In([UNIT_W, UNIT_KW])
+    schema[vol.Optional(CONF_UNIT_BATTERY, default=v.get(CONF_UNIT_BATTERY, DEF_UNIT_BATTERY))] = vol.In([UNIT_W, UNIT_KW])
 
     # Numériques (coercitions sûres)
     def opt_num(key, default_val):
