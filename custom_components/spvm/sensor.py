@@ -44,7 +44,7 @@ class _Base(CoordinatorEntity[SPVMCoordinator], SensorEntity):
             "identifiers": {(DOMAIN, self._entry.entry_id)},
             "name": "Smart PV Meter",
             "manufacturer": "SPVM",
-            "model": "Physical Solar Model v0.6.2",
+            "model": "Physical Solar Model v0.6.3",
         }
 
     @property
