@@ -50,8 +50,8 @@ print(f"  GHI clear-sky: {model.ghi_clear_wm2:.1f} W/m²")
 print(f"  POA clear-sky: {model.poa_clear_wm2:.1f} W/m²")
 
 print(f"\nProduction attendue:")
-print(f"  Théorique (sans correction): {model.expected_clear_w:.1f}W")
-print(f"  Corrigée (cloud/temp): {model.expected_corrected_w:.1f}W")
+print(f"  Clear-sky (sans nuages/temp): {model.expected_clear_w:.1f}W")
+print(f"  Corrigée (avec cloud/temp): {model.expected_corrected_w:.1f}W")
 
 if model.elevation_deg <= 0:
     print(f"\n⚠️  Le soleil est couché (élévation négative)")
