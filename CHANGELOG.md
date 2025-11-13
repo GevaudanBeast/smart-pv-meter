@@ -47,6 +47,11 @@
   - Possibilité de spécifier W ou kW individuellement pour chaque capteur (PV, house, grid, battery)
   - Résout le problème des installations mixtes (ex: Enphase en kW, Shelly en W)
   - Rétrocompatible avec l'ancienne configuration globale
+- 🎨 **Interface de configuration réorganisée** :
+  - Les unités apparaissent maintenant juste après leur capteur associé
+  - Hiérarchie visuelle avec préfixe └─ pour les champs d'unité
+  - Suppression des boutons radio globaux "Unité de puissance" (legacy conservé en interne)
+  - Label amélioré pour cloud_sensor : "Couverture nuageuse" / "Cloud cover"
 
 ### Commits
 - `ef548eb` - fix: Move async_get_options_flow to SPVMConfigFlow class
@@ -67,6 +72,8 @@
 - `0ff082f` - feat: Enhanced diagnostic script for surplus_net troubleshooting
 - `f3a5458` - docs: Update CHANGELOG with debug features and diagnostic enhancements
 - `2104cf6` - feat: Add per-sensor unit configuration (W vs kW) ⭐
+- `2e02557` - docs: Update CHANGELOG for per-sensor unit configuration feature
+- `320642c` - feat: Reorganize config UI for better clarity
 
 ---
 
