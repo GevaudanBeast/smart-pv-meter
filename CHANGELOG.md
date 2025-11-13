@@ -1,4 +1,24 @@
-# SPVM v0.6.0 - CHANGELOG & RELEASE NOTES
+# SPVM - CHANGELOG & RELEASE NOTES
+
+## 🐛 Version 0.6.3 - Hotfix (November 2025)
+
+### Corrections de bugs
+- ✅ **Fix critique** : Correction de l'erreur "400: Bad Request" lors du chargement du flux de configuration
+- ✅ **Options restaurées** : Le menu "Configurer" est de nouveau accessible dans les paramètres de l'intégration
+- 🔧 **Cause** : La fonction `async_get_options_flow` devait être une méthode statique de la classe `SPVMConfigFlow` au lieu d'une fonction au niveau du module
+
+### Fichiers modifiés
+- `config_flow.py` : Déplacement de `async_get_options_flow` dans la classe `SPVMConfigFlow`
+
+---
+
+## 📝 Version 0.6.2 - Patch (November 2025)
+
+### Améliorations
+- 🔧 Améliorations mineures du flux de configuration
+- 📖 Documentation mise à jour
+
+---
 
 ## 🎉 Version 0.6.0 - "Solar Physics Model" (November 2025)
 
