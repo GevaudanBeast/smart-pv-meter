@@ -19,10 +19,12 @@ Si vos capteurs SPVM affichent **0W** ou **"inconnu"**, voici comment diagnostiq
   - Valeur = (Production PV réelle / Production attendue) × 100%
 
 ### Surplus net (sensor.spvm_surplus_net)
-- **0W** : **Normal si pas d'excédent** ✅
+- **0W** : **Normal dans plusieurs cas** ✅
   - Surplus = max(PV - Consommation - Réserve, 0)
   - Si vous consommez toute votre production, c'est normal
+  - **Installation bridée en autoconsommation** : Toujours 0W car l'onduleur suit la consommation (voir Cas 4 ci-dessous)
   - **Nouveau (v0.6.3)** : Vérifiez les attributs debug pour comprendre le calcul
+  - **Pour Solar Optimizer** : Utilisez `expected_production` si installation bridée (voir README)
 
 ---
 
@@ -67,6 +69,41 @@ debug_house_w: 2.6W
 ```
 **Problème** : Vos capteurs sont probablement en kW, pas en W
 **Solution** : Configurez les unités par capteur (voir ci-dessous)
+
+#### Cas 4 : Installation bridée en autoconsommation ⚡
+```
+debug_pv_w: 800W              # Production bridée actuelle
+debug_house_w: 800W           # Consommation actuelle
+debug_surplus_virtual: 0W
+→ surplus_net = 0W ✅ NORMAL
+```
+
+**Explication** : Votre installation photovoltaïque est configurée pour **suivre la consommation** (mode autoconsommation bridé), couramment avec :
+- Enphase micro-onduleurs
+- Certaines configurations d'onduleurs hybrides
+- Installations sans droit d'injection réseau
+
+**C'est normal !** `surplus_net` montre le surplus **actuellement exporté**, qui est 0W car votre onduleur limite la production pour suivre la consommation.
+
+**Pour Solar Optimizer** : Utilisez `sensor.spvm_expected_production` au lieu de `surplus_net` :
+- `expected_production` indique le **potentiel théorique** disponible (ex: 3000W)
+- Votre onduleur augmentera automatiquement la production quand Solar Optimizer activera des appareils
+- Voir [README.md - Integration with Solar Optimizer](README.md#integration-with-solar-optimizer) pour la configuration complète
+
+**Exemple concret** :
+```
+Situation actuelle:
+  - Production PV: 800W (bridée)
+  - Consommation: 800W
+  - surplus_net: 0W ✅
+
+Expected production: 3000W (conditions ensoleillées)
+
+Solar Optimizer active 2kW de charge:
+  → Onduleur augmente automatiquement à 2800W
+  → Consommation totale: 2800W
+  → Tout en solaire, 0 import réseau ! ☀️
+```
 
 ---
 
