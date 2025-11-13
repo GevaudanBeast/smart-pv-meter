@@ -80,35 +80,65 @@ def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
     v = _merge_defaults(hass, cur)
     schema = {}
 
-    # Requis
+    # === CAPTEURS DE PUISSANCE + UNITÉS ===
+
+    # PV sensor (requis) + unité
     if v.get(CONF_PV_SENSOR):
         schema[vol.Required(CONF_PV_SENSOR, default=v[CONF_PV_SENSOR])] = _ent_sel()
     else:
         schema[vol.Required(CONF_PV_SENSOR)] = _ent_sel()
+    schema[vol.Optional(CONF_UNIT_PV, default=v.get(CONF_UNIT_PV, DEF_UNIT_PV))] = vol.In([UNIT_W, UNIT_KW])
+
+    # House sensor (requis) + unité
     if v.get(CONF_HOUSE_SENSOR):
         schema[vol.Required(CONF_HOUSE_SENSOR, default=v[CONF_HOUSE_SENSOR])] = _ent_sel()
     else:
         schema[vol.Required(CONF_HOUSE_SENSOR)] = _ent_sel()
+    schema[vol.Optional(CONF_UNIT_HOUSE, default=v.get(CONF_UNIT_HOUSE, DEF_UNIT_HOUSE))] = vol.In([UNIT_W, UNIT_KW])
 
-    # Optionnels capteurs
-    for key in (CONF_GRID_POWER_SENSOR, CONF_BATTERY_SENSOR, CONF_LUX_SENSOR,
-                CONF_TEMP_SENSOR, CONF_HUM_SENSOR, CONF_CLOUD_SENSOR):
-        if v.get(key):
-            schema[vol.Optional(key, default=v[key])] = _ent_sel()
-        else:
-            schema[vol.Optional(key)] = _ent_sel()
+    # Grid sensor (optionnel) + unité
+    if v.get(CONF_GRID_POWER_SENSOR):
+        schema[vol.Optional(CONF_GRID_POWER_SENSOR, default=v[CONF_GRID_POWER_SENSOR])] = _ent_sel()
+    else:
+        schema[vol.Optional(CONF_GRID_POWER_SENSOR)] = _ent_sel()
+    schema[vol.Optional(CONF_UNIT_GRID, default=v.get(CONF_UNIT_GRID, DEF_UNIT_GRID))] = vol.In([UNIT_W, UNIT_KW])
 
-    # Unités globales (legacy, conservé pour compatibilité)
-    up = v.get(CONF_UNIT_POWER, DEF_UNIT_POWER)
+    # Battery sensor (optionnel) + unité
+    if v.get(CONF_BATTERY_SENSOR):
+        schema[vol.Optional(CONF_BATTERY_SENSOR, default=v[CONF_BATTERY_SENSOR])] = _ent_sel()
+    else:
+        schema[vol.Optional(CONF_BATTERY_SENSOR)] = _ent_sel()
+    schema[vol.Optional(CONF_UNIT_BATTERY, default=v.get(CONF_UNIT_BATTERY, DEF_UNIT_BATTERY))] = vol.In([UNIT_W, UNIT_KW])
+
+    # === CAPTEURS ENVIRONNEMENT ===
+
+    # Lux sensor (optionnel)
+    if v.get(CONF_LUX_SENSOR):
+        schema[vol.Optional(CONF_LUX_SENSOR, default=v[CONF_LUX_SENSOR])] = _ent_sel()
+    else:
+        schema[vol.Optional(CONF_LUX_SENSOR)] = _ent_sel()
+
+    # Temperature sensor (optionnel) + unité
+    if v.get(CONF_TEMP_SENSOR):
+        schema[vol.Optional(CONF_TEMP_SENSOR, default=v[CONF_TEMP_SENSOR])] = _ent_sel()
+    else:
+        schema[vol.Optional(CONF_TEMP_SENSOR)] = _ent_sel()
     ut = v.get(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
-    schema[vol.Optional(CONF_UNIT_POWER, default=up)] = vol.In([UNIT_W, UNIT_KW])
     schema[vol.Optional(CONF_UNIT_TEMP, default=ut)] = vol.In([UNIT_C, UNIT_F])
 
-    # Unités par capteur (v0.6.3+)
-    schema[vol.Optional(CONF_UNIT_PV, default=v.get(CONF_UNIT_PV, DEF_UNIT_PV))] = vol.In([UNIT_W, UNIT_KW])
-    schema[vol.Optional(CONF_UNIT_HOUSE, default=v.get(CONF_UNIT_HOUSE, DEF_UNIT_HOUSE))] = vol.In([UNIT_W, UNIT_KW])
-    schema[vol.Optional(CONF_UNIT_GRID, default=v.get(CONF_UNIT_GRID, DEF_UNIT_GRID))] = vol.In([UNIT_W, UNIT_KW])
-    schema[vol.Optional(CONF_UNIT_BATTERY, default=v.get(CONF_UNIT_BATTERY, DEF_UNIT_BATTERY))] = vol.In([UNIT_W, UNIT_KW])
+    # Humidity sensor (optionnel)
+    if v.get(CONF_HUM_SENSOR):
+        schema[vol.Optional(CONF_HUM_SENSOR, default=v[CONF_HUM_SENSOR])] = _ent_sel()
+    else:
+        schema[vol.Optional(CONF_HUM_SENSOR)] = _ent_sel()
+
+    # Cloud cover sensor (optionnel)
+    if v.get(CONF_CLOUD_SENSOR):
+        schema[vol.Optional(CONF_CLOUD_SENSOR, default=v[CONF_CLOUD_SENSOR])] = _ent_sel()
+    else:
+        schema[vol.Optional(CONF_CLOUD_SENSOR)] = _ent_sel()
+
+    # === PARAMÈTRES SYSTÈME ===
 
     # Numériques (coercitions sûres)
     def opt_num(key, default_val):
