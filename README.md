@@ -81,7 +81,25 @@ Configure your solar installation:
 
 **Note:** Latitude/longitude/altitude default to your Home Assistant location if not specified.
 
-### 5. Advanced Settings
+### 5. Sensor Units (v0.6.3+) ⭐
+
+Each power sensor can now have its own unit configuration:
+
+| Sensor | Unit Options | Example |
+|--------|--------------|---------|
+| PV sensor | W or kW | kW (Enphase Envoy) |
+| House sensor | W or kW | kW (Enphase Envoy) |
+| Grid sensor | W or kW | W (Shelly) |
+| Battery sensor | W or kW | W (Zendure) |
+
+**Why this matters:**
+- **Enphase Envoy** sensors report in kW
+- **Shelly** sensors report in W
+- **Zendure** sensors report in W
+
+Configure each sensor's unit separately to ensure accurate calculations!
+
+### 6. Advanced Settings
 - **Reserve (W)** - Battery reserve to keep (default: 150W)
 - **Cap max (W)** - Hard power cap (default: 3000W)
 - **Degradation (%)** - Panel aging/degradation (default: 0%)
@@ -92,6 +110,19 @@ Configure your solar installation:
 ## 🧪 Diagnostic Guide
 
 If your sensors show **0W** or **"unknown"**, see [DIAGNOSTIC.md](DIAGNOSTIC.md) for troubleshooting.
+
+### Debug Attributes (v0.6.3+) 🔍
+
+The `sensor.spvm_surplus_net` now includes debug attributes to help troubleshoot issues:
+
+```yaml
+debug_pv_w: 966.0           # PV production in watts (after unit conversion)
+debug_house_w: 920.0        # House consumption in watts (after unit conversion)
+debug_surplus_virtual: 58.3 # Surplus before reserve
+reserve_w: 150              # Configured reserve
+```
+
+**Quick check:** If `debug_pv_w` or `debug_house_w` show very low values (< 10W), you probably have a unit configuration issue (kW vs W).
 
 ### Quick Diagnostic Script
 

@@ -22,14 +22,97 @@ Si vos capteurs SPVM affichent **0W** ou **"inconnu"**, voici comment diagnostiq
 - **0W** : **Normal si pas d'excédent** ✅
   - Surplus = max(PV - Consommation - Réserve, 0)
   - Si vous consommez toute votre production, c'est normal
+  - **Nouveau (v0.6.3)** : Vérifiez les attributs debug pour comprendre le calcul
+
+---
+
+## 🆕 Attributs de debug (v0.6.3+)
+
+Le capteur `sensor.spvm_surplus_net` expose maintenant des attributs de debug pour diagnostiquer les problèmes :
+
+### Vérifier les valeurs
+1. **Outils de développement** → **États** → `sensor.spvm_surplus_net`
+2. Regardez ces attributs :
+
+```yaml
+debug_pv_w: 966.0           # Production PV après conversion d'unité
+debug_house_w: 920.0        # Consommation après conversion d'unité
+debug_surplus_virtual: 58.3 # Surplus calculé avant réserve
+reserve_w: 150              # Réserve configurée
+```
+
+### Diagnostic surplus_net = 0W
+
+#### Cas 1 : Surplus < Réserve
+```
+debug_surplus_virtual: 58.3W
+reserve_w: 150W
+→ surplus_net = max(58.3 - 150, 0) = 0W ✅
+```
+**Solution** : Réduire la réserve ou attendre plus de production
+
+#### Cas 2 : Pas de surplus
+```
+debug_pv_w: 800W
+debug_house_w: 950W
+debug_surplus_virtual: -150W (négatif)
+→ surplus_net = 0W ✅
+```
+**Normal** : Vous consommez plus que vous ne produisez
+
+#### Cas 3 : Problème d'unités
+```
+debug_pv_w: 2.6W   ← ⚠️ Très faible !
+debug_house_w: 2.6W
+```
+**Problème** : Vos capteurs sont probablement en kW, pas en W
+**Solution** : Configurez les unités par capteur (voir ci-dessous)
+
+---
+
+## ⚙️ Configuration des unités (v0.6.3+)
+
+### Problème : Capteurs en unités différentes
+
+Si vous avez des capteurs de différents fabricants :
+- **Enphase Envoy** : Envoie souvent en **kW**
+- **Shelly** : Envoie en **W**
+- **Zendure** : Envoie en **W**
+
+### Solution : Unités par capteur
+
+**Paramètres** → **Appareils et services** → **Smart PV Meter** → **CONFIGURER**
+
+```
+Capteur production PV
+└─ Unité : kW  ← Pour Enphase
+
+Capteur consommation maison
+└─ Unité : kW  ← Pour Enphase
+
+Capteur réseau
+└─ Unité : W   ← Pour Shelly
+
+Capteur batterie
+└─ Unité : W   ← Pour Zendure
+```
+
+Après modification :
+1. Sauvegardez
+2. **⋮ (trois points)** → **Recharger**
+3. Vérifiez que `debug_pv_w` affiche maintenant des valeurs cohérentes (centaines ou milliers de watts)
 
 ---
 
 ## 🔧 Script de diagnostic
 
-### Étape 1 : Copiez le script
+**Nouveau (v0.6.3)** : Le script de diagnostic est maintenant inclus dans l'intégration !
 
-Créez un fichier `/config/spvm_diagnostic.py` avec ce contenu :
+### Étape 1 : Utilisez le script intégré
+
+Le script est disponible dans `/config/custom_components/spvm/diagnostic.py`
+
+Ou créez votre propre fichier `/config/spvm_diagnostic.py` avec ce contenu :
 
 ```python
 #!/usr/bin/env python3
@@ -83,6 +166,10 @@ else:
 Depuis Home Assistant (terminal SSH ou File Editor) :
 
 ```bash
+# Avec le script intégré
+python3 /config/custom_components/spvm/diagnostic.py
+
+# Ou avec votre propre script
 cd /config
 python3 spvm_diagnostic.py
 ```
@@ -136,11 +223,10 @@ Vos coordonnées sont dans **Configuration** → **Général** → **Localisatio
 
 ## 🔍 Attributs de diagnostic
 
-Chaque capteur SPVM a des **attributs** visibles dans l'interface :
+### Attributs de expected_production
 
-1. Allez dans **Outils de développement** → **États**
-2. Cherchez `sensor.spvm_expected_production`
-3. Regardez les **Attributs** :
+1. **Outils de développement** → **États** → `sensor.spvm_expected_production`
+2. Regardez les **Attributs** :
 
 ```yaml
 model_elevation_deg: 45.67  # Élévation du soleil
@@ -158,6 +244,19 @@ panel:
 system_efficiency: 0.85
 ```
 
+### Attributs de surplus_net (v0.6.3+)
+
+1. **Outils de développement** → **États** → `sensor.spvm_surplus_net`
+2. Regardez les **Attributs de debug** :
+
+```yaml
+debug_pv_w: 966.0           # Production PV en watts (après conversion)
+debug_house_w: 920.0        # Consommation en watts (après conversion)
+debug_surplus_virtual: 58.3 # Surplus calculé avant réserve
+reserve_w: 150              # Réserve configurée
+grid_now: -58.3            # Puissance réseau (négatif = export)
+```
+
 ### ✅ Vérifications rapides
 
 | Attribut | Valeur attendue | Si incorrect |
@@ -166,6 +265,8 @@ system_efficiency: 0.85
 | `ghi_clear_wm2` | 100-1200 W/m² | Si 0 → vérifier latitude/longitude |
 | `poa_clear_wm2` | > ghi si bien orienté | Si < ghi → vérifier orientation panneaux |
 | `panel.peak_w` | Votre puissance crête | Si incorrect → reconfigurer |
+| `debug_pv_w` | Centaines/milliers de watts | Si < 10W → problème d'unités (kW vs W) |
+| `debug_house_w` | Centaines/milliers de watts | Si < 10W → problème d'unités (kW vs W) |
 
 ---
 
