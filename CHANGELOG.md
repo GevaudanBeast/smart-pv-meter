@@ -9,6 +9,7 @@
 - ✅ **Fix diagnostics** : Correction de l'accès au coordinator dans diagnostics.py
 - ✅ **Fix calcul solaire** : Correction du bug dans l'équation du temps (double conversion math.degrees)
 - ✅ **Fix calcul production attendue** : La réserve ne doit plus être soustraite de expected_w (uniquement de surplus_net_w)
+- ✅ **Fix unités mixtes** : Ajout d'unités par capteur (W/kW) au lieu d'une seule unité globale
 - ✅ **Options restaurées** : Le menu "Configurer" est de nouveau accessible dans les paramètres
 
 ### Nettoyage du code
@@ -42,6 +43,10 @@
   - Détection automatique des problèmes d'unités (W vs kW)
   - Diagnostic étape par étape du calcul
 - 🐛 **Logging de debug** : Nouveaux logs et attributs debug (debug_pv_w, debug_house_w, debug_surplus_virtual)
+- ⚡ **Configuration d'unités par capteur** :
+  - Possibilité de spécifier W ou kW individuellement pour chaque capteur (PV, house, grid, battery)
+  - Résout le problème des installations mixtes (ex: Enphase en kW, Shelly en W)
+  - Rétrocompatible avec l'ancienne configuration globale
 
 ### Commits
 - `ef548eb` - fix: Move async_get_options_flow to SPVMConfigFlow class
@@ -60,6 +65,8 @@
 - `b89710b` - docs: Update CHANGELOG for reserve fix and diagnostic move
 - `2b6d3fa` - debug: Add detailed logging for surplus_net calculation
 - `0ff082f` - feat: Enhanced diagnostic script for surplus_net troubleshooting
+- `f3a5458` - docs: Update CHANGELOG with debug features and diagnostic enhancements
+- `2104cf6` - feat: Add per-sensor unit configuration (W vs kW) ⭐
 
 ---
 

@@ -17,6 +17,8 @@ from .const import (
     CONF_LUX_SENSOR, CONF_TEMP_SENSOR, CONF_HUM_SENSOR, CONF_CLOUD_SENSOR,
     # units & defaults
     CONF_UNIT_POWER, CONF_UNIT_TEMP, DEF_UNIT_POWER, DEF_UNIT_TEMP, UNIT_W, UNIT_KW, KW_TO_W,
+    CONF_UNIT_PV, CONF_UNIT_HOUSE, CONF_UNIT_GRID, CONF_UNIT_BATTERY,
+    DEF_UNIT_PV, DEF_UNIT_HOUSE, DEF_UNIT_GRID, DEF_UNIT_BATTERY,
     # reserve / caps / ageing
     CONF_RESERVE_W, DEF_RESERVE_W, CONF_CAP_MAX_W, DEF_CAP_MAX_W,
     CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT,
@@ -78,8 +80,12 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         self.hum_entity: Optional[str] = data.get(CONF_HUM_SENSOR)
         self.cloud_entity: Optional[str] = data.get(CONF_CLOUD_SENSOR)
 
-        # Units
-        self.unit_power: str = data.get(CONF_UNIT_POWER, DEF_UNIT_POWER)
+        # Units (per-sensor with fallback to legacy global unit)
+        legacy_unit_power = data.get(CONF_UNIT_POWER, DEF_UNIT_POWER)
+        self.unit_pv: str = data.get(CONF_UNIT_PV, legacy_unit_power)
+        self.unit_house: str = data.get(CONF_UNIT_HOUSE, legacy_unit_power)
+        self.unit_grid: str = data.get(CONF_UNIT_GRID, legacy_unit_power)
+        self.unit_battery: str = data.get(CONF_UNIT_BATTERY, legacy_unit_power)
         self.unit_temp: str = data.get(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
 
         # Behaviour
@@ -134,11 +140,11 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         if house is None:
             raise UpdateFailed("house_sensor has no numeric state")
 
-        # Convert PV / HOUSE to W if user selected kW
-        factor = KW_TO_W if self.unit_power == UNIT_KW else 1.0
-        pv_w = pv * factor
-        house_w = house * factor
-        grid_w = grid * factor if grid is not None else None
+        # Convert to W per sensor unit
+        pv_w = pv * (KW_TO_W if self.unit_pv == UNIT_KW else 1.0)
+        house_w = house * (KW_TO_W if self.unit_house == UNIT_KW else 1.0)
+        grid_w = grid * (KW_TO_W if self.unit_grid == UNIT_KW else 1.0) if grid is not None else None
+        batt_w = batt * (KW_TO_W if self.unit_battery == UNIT_KW else 1.0) if batt is not None else None
 
         # ---- Physical solar model ----
         now_utc = datetime.now(timezone.utc)
