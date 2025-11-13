@@ -208,6 +208,11 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(step_id="user", data_schema=_schema(self.hass, None), errors=errors)
 
+    @staticmethod
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry):
+        """Return the options flow handler."""
+        return SPVMOptionsFlowHandler(config_entry)
+
 
 class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
     """Options (édition) robustes sans defaults None et avec coercition."""
@@ -229,7 +234,3 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=clean)
 
         return self.async_show_form(step_id="init", data_schema=_schema(self.hass, merged), errors={})
-
-
-async def async_get_options_flow(config_entry: config_entries.ConfigEntry):
-    return SPVMOptionsFlowHandler(config_entry)
