@@ -44,6 +44,10 @@
 - `41de04a` - fix: Use vol.Coerce instead of custom coercion functions
 - `d579907` - fix: Critical diagnostics bug and code cleanup
 - `317964d` - docs: Update CHANGELOG and translations for v0.6.3
+- `4a4bcd2` - feat: Shorter entity names and diagnostic guide
+- `03e6384` - fix: Critical solar calculation bug (equation of time) ⭐
+- `4e461df` - docs: Improve diagnostic script labels
+- `268f559` - docs: Update documentation for v0.6.3
 
 ---
 
