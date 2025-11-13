@@ -4,7 +4,7 @@ Si vos capteurs SPVM affichent **0W** ou **"inconnu"**, voici comment diagnostiq
 
 ## 📊 Comprendre les valeurs
 
-### Production attendue (sensor.spvm_production_attendue)
+### Production attendue (sensor.spvm_expected_production)
 - **0W pendant la nuit** : **Normal** ✅
   - Le soleil est couché (élévation négative)
   - Le modèle solaire calcule correctement 0W
@@ -13,7 +13,7 @@ Si vos capteurs SPVM affichent **0W** ou **"inconnu"**, voici comment diagnostiq
   - Vérifiez vos paramètres solaires
   - Utilisez le script de diagnostic ci-dessous
 
-### Rendement (sensor.spvm_rendement)
+### Rendement (sensor.spvm_yield_ratio)
 - **"inconnu"** : **Normal la nuit** ✅
   - Le rendement ne peut pas être calculé quand production attendue < 1W
   - Valeur = (Production PV réelle / Production attendue) × 100%
@@ -139,7 +139,7 @@ Vos coordonnées sont dans **Configuration** → **Général** → **Localisatio
 Chaque capteur SPVM a des **attributs** visibles dans l'interface :
 
 1. Allez dans **Outils de développement** → **États**
-2. Cherchez `sensor.spvm_production_attendue`
+2. Cherchez `sensor.spvm_expected_production`
 3. Regardez les **Attributs** :
 
 ```yaml

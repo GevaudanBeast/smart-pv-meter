@@ -7,6 +7,7 @@
 - ✅ **Fix 500 Internal Server Error** : Correction due aux fonctions de coercition non sérialisables
 - ✅ **Fix SyntaxError** : Correction de la syntaxe invalide dans les fonctions helper
 - ✅ **Fix diagnostics** : Correction de l'accès au coordinator dans diagnostics.py
+- ✅ **Fix calcul solaire** : Correction du bug dans l'équation du temps (double conversion math.degrees)
 - ✅ **Options restaurées** : Le menu "Configurer" est de nouveau accessible dans les paramètres
 
 ### Nettoyage du code
@@ -29,9 +30,9 @@
 - `.gitignore` : Ajout pour ignorer les fichiers cache Python
 
 ### Améliorations
-- 🏷️ **Noms d'entités courts** : Les entités utilisent maintenant des noms courts
-  - `sensor.spvm_production_attendue` au lieu de `sensor.smart_pv_meter_spvm_production_attendue`
-  - `sensor.spvm_rendement` au lieu de `sensor.smart_pv_meter_spvm_rendement`
+- 🏷️ **Noms d'entités courts (anglais)** : Les entités utilisent maintenant des noms courts en anglais
+  - `sensor.spvm_expected_production` au lieu de `sensor.smart_pv_meter_spvm_production_attendue`
+  - `sensor.spvm_yield_ratio` au lieu de `sensor.smart_pv_meter_spvm_rendement`
   - `sensor.spvm_surplus_net` au lieu de `sensor.smart_pv_meter_spvm_surplus_net`
 - 📖 **Guide de diagnostic** : Ajout de DIAGNOSTIC.md pour comprendre les valeurs à 0W
 
