@@ -2,22 +2,39 @@
 
 ## 🐛 Version 0.6.3 - Hotfix (November 2025)
 
-### Corrections de bugs
-- ✅ **Fix critique 1** : Correction de l'erreur "400: Bad Request" lors du chargement du flux de configuration
-- ✅ **Fix critique 2** : Correction de l'erreur "500 Internal Server Error" due aux fonctions de coercition non sérialisables
-- ✅ **Fix syntaxe** : Correction de la SyntaxError dans les fonctions helper inutilisées
-- ✅ **Options restaurées** : Le menu "Configurer" est de nouveau accessible dans les paramètres de l'intégration
+### Corrections de bugs critiques
+- ✅ **Fix 400 Bad Request** : Correction de l'erreur lors du chargement du flux de configuration
+- ✅ **Fix 500 Internal Server Error** : Correction due aux fonctions de coercition non sérialisables
+- ✅ **Fix SyntaxError** : Correction de la syntaxe invalide dans les fonctions helper
+- ✅ **Fix diagnostics** : Correction de l'accès au coordinator dans diagnostics.py
+- ✅ **Options restaurées** : Le menu "Configurer" est de nouveau accessible dans les paramètres
+
+### Nettoyage du code
+- 🧹 Suppression de **234 lignes** de code mort et fichiers legacy :
+  - `expected.py` : Ancien modèle solaire v0.6.0 non utilisé
+  - `const_old.py` : Constantes k-NN v0.5.x obsolètes
+  - `tests/test_units.py` : Tests cassés avec imports incorrects
+- 📦 Mise à jour de la version dans sensor.py (v0.6.2 → v0.6.3)
 
 ### Causes des problèmes
-- La fonction `async_get_options_flow` devait être une méthode statique de la classe `SPVMConfigFlow` au lieu d'une fonction au niveau du module
-- Les fonctions personnalisées `_coerce_float` et `_coerce_int` ne pouvaient pas être sérialisées par `voluptuous_serialize`
+- La fonction `async_get_options_flow` devait être une méthode statique de la classe `SPVMConfigFlow`
+- Les fonctions personnalisées `_coerce_float` et `_coerce_int` n'étaient pas sérialisables par `voluptuous_serialize`
 - Syntaxe invalide dans les fonctions helper `req_entity` et `opt_entity`
+- Accès incorrect au coordinator dans diagnostics.py avec `["coordinator"]`
 
 ### Fichiers modifiés
-- `config_flow.py` : Déplacement de `async_get_options_flow` dans la classe `SPVMConfigFlow`
-- `config_flow.py` : Remplacement des fonctions de coercition personnalisées par `vol.Coerce(float)` et `vol.Coerce(int)`
-- `config_flow.py` : Suppression des fonctions helper inutilisées avec syntaxe invalide
+- `config_flow.py` : Méthode statique `async_get_options_flow`, utilisation de `vol.Coerce()`
+- `diagnostics.py` : Correction de l'accès au coordinator
+- `sensor.py` : Mise à jour de la version
 - `.gitignore` : Ajout pour ignorer les fichiers cache Python
+
+### Commits
+- `ef548eb` - fix: Move async_get_options_flow to SPVMConfigFlow class
+- `b4bd0f5` - chore(release): v0.6.3
+- `1f5541b` - fix: Remove unused helper functions with invalid syntax
+- `bef925f` - chore: Add .gitignore to ignore Python cache files
+- `41de04a` - fix: Use vol.Coerce instead of custom coercion functions
+- `d579907` - fix: Critical diagnostics bug and code cleanup
 
 ---
 
