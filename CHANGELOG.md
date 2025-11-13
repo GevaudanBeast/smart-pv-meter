@@ -36,7 +36,12 @@
   - `sensor.spvm_yield_ratio` au lieu de `sensor.smart_pv_meter_spvm_rendement`
   - `sensor.spvm_surplus_net` au lieu de `sensor.smart_pv_meter_spvm_surplus_net`
 - 📖 **Guide de diagnostic** : Ajout de DIAGNOSTIC.md pour comprendre les valeurs à 0W
-- 🔧 **Script de diagnostic** : Déplacement dans custom_components/spvm/ pour maintenance simplifiée
+- 🔧 **Script de diagnostic amélioré** :
+  - Déplacement dans custom_components/spvm/ pour maintenance simplifiée
+  - Simulateur interactif de calcul surplus_net
+  - Détection automatique des problèmes d'unités (W vs kW)
+  - Diagnostic étape par étape du calcul
+- 🐛 **Logging de debug** : Nouveaux logs et attributs debug (debug_pv_w, debug_house_w, debug_surplus_virtual)
 
 ### Commits
 - `ef548eb` - fix: Move async_get_options_flow to SPVMConfigFlow class
@@ -51,7 +56,10 @@
 - `4e461df` - docs: Improve diagnostic script labels
 - `268f559` - docs: Update documentation for v0.6.3
 - `3903c8f` - docs: Add remaining commits to CHANGELOG
-- `d23db25` - fix: Remove incorrect reserve subtraction from expected production
+- `d23db25` - fix: Remove incorrect reserve subtraction from expected production ⭐
+- `b89710b` - docs: Update CHANGELOG for reserve fix and diagnostic move
+- `2b6d3fa` - debug: Add detailed logging for surplus_net calculation
+- `0ff082f` - feat: Enhanced diagnostic script for surplus_net troubleshooting
 
 ---
 
