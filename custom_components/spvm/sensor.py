@@ -58,6 +58,18 @@ class _Base(CoordinatorEntity[SPVMCoordinator], SensorEntity):
 
 
 class SPVMExpectedProduction(_Base):
+    """Expected solar production sensor.
+
+    Shows theoretical production based on sun position, weather, and panel specs.
+
+    Usage:
+    - Solar Optimizer "Production solaire" field (for bridled/self-consumption installations)
+    - Forecasting and planning automations
+    - Comparing actual vs theoretical production
+
+    Note: For bridled installations (Enphase, some micro-inverters), this is the
+    POTENTIAL production available, not the current bridled output.
+    """
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry, S_SPVM_EXPECTED_PRODUCTION, L_EXPECTED_PRODUCTION, "expected_production")
         self._attr_native_unit_of_measurement = UNIT_W
@@ -72,6 +84,20 @@ class SPVMExpectedProduction(_Base):
 
 
 class SPVMYieldRatio(_Base):
+    """Yield ratio sensor (actual / expected production × 100%).
+
+    Shows installation performance compared to theoretical expectations.
+
+    Usage:
+    - Installation health monitoring
+    - Detect panel degradation or shading issues
+    - Track seasonal performance variations
+
+    Typical values:
+    - 90-110%: Normal performance
+    - > 110%: Better than expected (cold weather, clean panels)
+    - < 90%: Check for issues (shading, dirt, misconfiguration)
+    """
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry, S_SPVM_YIELD_RATIO, L_YIELD_RATIO, "yield_ratio")
         self._attr_native_unit_of_measurement = UNIT_PERCENT
@@ -85,6 +111,32 @@ class SPVMYieldRatio(_Base):
 
 
 class SPVMSurplusNet(_Base):
+    """Net surplus power sensor (current real surplus after house consumption and reserve).
+
+    Shows the CURRENT real surplus power available for additional loads.
+    Formula: max(PV - House - Reserve, 0)
+
+    Usage:
+    - Real-time monitoring of exported power
+    - Simple automations for non-bridled installations
+    - NOT for Solar Optimizer with bridled installations (use expected_production instead)
+
+    Important notes:
+    - For BRIDLED installations (Enphase, micro-inverters in self-consumption mode):
+      This will show 0W because the inverter limits production to match consumption.
+      This is NORMAL. Use expected_production for Solar Optimizer instead.
+
+    - For NON-BRIDLED installations (export mode):
+      This shows real surplus that can be used immediately.
+
+    Debug attributes (v0.6.3+):
+    - debug_pv_w: PV production after unit conversion
+    - debug_house_w: House consumption after unit conversion
+    - debug_surplus_virtual: Surplus before reserve subtraction
+    - reserve_w: Configured reserve value
+
+    See DIAGNOSTIC.md for troubleshooting if this shows 0W.
+    """
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, "surplus_net")
         self._attr_native_unit_of_measurement = UNIT_W

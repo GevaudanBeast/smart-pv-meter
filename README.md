@@ -187,23 +187,105 @@ sensor.spvm_expected_production:
 
 ---
 
-## 🔧 Usage with Solar Optimizer
+## 🔧 Integration with Solar Optimizer
 
-SPVM is designed to work seamlessly with solar optimizers:
+SPVM provides sensors specifically designed for solar optimization integrations like [Solar Optimizer](https://github.com/jmcollin78/solar_optimizer).
+
+### Understanding SPVM Sensors
+
+SPVM exposes three sensors with different purposes:
+
+| Sensor | What it shows | Use case |
+|--------|---------------|----------|
+| `spvm_expected_production` | **Theoretical production** based on sun position, weather, and panel specs | Solar Optimizer: "Production solaire" field |
+| `spvm_surplus_net` | **Current real surplus** after house consumption and reserve | Real-time monitoring, simple automations |
+| `spvm_yield_ratio` | Performance ratio (actual / expected) | Installation health monitoring |
+
+### Configuration for Solar Optimizer
+
+#### For Bridled/Self-Consumption Installations ⚡
+
+If your installation is **bridled to match consumption** (common with Enphase, some micro-inverters), use:
 
 ```yaml
-# Use sensor.spvm_surplus_net for your solar optimizer
+Solar Optimizer configuration:
+  Production solaire: sensor.spvm_expected_production  # Theoretical potential
+  Consommation nette: sensor.your_house_consumption    # Actual house consumption
+```
+
+**Why?**
+- Your PV production sensor shows **current limited output** (e.g., 800W)
+- `expected_production` shows **theoretical available power** (e.g., 3000W)
+- Solar Optimizer uses this to know it can activate up to **2200W more** of appliances
+- Your inverter will automatically increase production to match the new load
+
+**Example scenario:**
+```
+Current state:
+  - PV bridled: 800W (following consumption)
+  - House consumption: 800W
+  - Expected production: 3000W (sunny conditions)
+  - surplus_net: 0W ✅ Normal - no surplus currently
+
+Solar Optimizer sees:
+  - Can produce: 3000W
+  - Already consuming: 800W
+  - Available to activate: 2200W
+
+Action:
+  - SO activates 2kW water heater
+  - Your inverter ramps up to 2800W
+  - Perfect solar optimization! ☀️
+```
+
+#### For Non-Bridled Installations (Export Mode)
+
+If your installation **exports to grid** freely:
+
+```yaml
+Solar Optimizer configuration:
+  Production solaire: sensor.your_pv_production       # Actual PV production
+  Consommation nette: sensor.your_grid_power          # Grid import/export
+```
+
+Or use SPVM's real-time calculation:
+
+```yaml
+Solar Optimizer configuration:
+  Production solaire: sensor.spvm_surplus_net  # Real surplus available now
+```
+
+### Why `surplus_net = 0W` is Normal
+
+If you see `surplus_net` constantly at **0W**, this is **normal** for bridled installations:
+
+- `surplus_net` shows **current real surplus** (what's exported now)
+- In bridled mode, you don't export, so surplus = 0W ✅
+- Use `expected_production` to tell optimizers about **potential** available power
+
+### Advanced Automation Example
+
+```yaml
 automation:
-  - alias: "Solar Optimizer Control"
+  - alias: "Solar Optimizer - Dynamic Power Control"
     trigger:
       - platform: state
-        entity_id: sensor.spvm_surplus_net
+        entity_id: sensor.spvm_expected_production
+    condition:
+      - condition: numeric_state
+        entity_id: sensor.spvm_expected_production
+        above: 1000  # Only activate if 1kW+ available
     action:
       - service: number.set_value
         target:
-          entity_id: number.solar_optimizer_power
+          entity_id: number.water_heater_power
         data:
-          value: "{{ states('sensor.spvm_surplus_net') | float }}"
+          value: >
+            {{ [
+              (states('sensor.spvm_expected_production') | float -
+               states('sensor.house_consumption') | float - 150) | round(0),
+              0
+            ] | max }}
 ```
 
 ---
