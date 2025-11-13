@@ -8,6 +8,7 @@
 - ✅ **Fix SyntaxError** : Correction de la syntaxe invalide dans les fonctions helper
 - ✅ **Fix diagnostics** : Correction de l'accès au coordinator dans diagnostics.py
 - ✅ **Fix calcul solaire** : Correction du bug dans l'équation du temps (double conversion math.degrees)
+- ✅ **Fix calcul production attendue** : La réserve ne doit plus être soustraite de expected_w (uniquement de surplus_net_w)
 - ✅ **Options restaurées** : Le menu "Configurer" est de nouveau accessible dans les paramètres
 
 ### Nettoyage du code
@@ -35,6 +36,7 @@
   - `sensor.spvm_yield_ratio` au lieu de `sensor.smart_pv_meter_spvm_rendement`
   - `sensor.spvm_surplus_net` au lieu de `sensor.smart_pv_meter_spvm_surplus_net`
 - 📖 **Guide de diagnostic** : Ajout de DIAGNOSTIC.md pour comprendre les valeurs à 0W
+- 🔧 **Script de diagnostic** : Déplacement dans custom_components/spvm/ pour maintenance simplifiée
 
 ### Commits
 - `ef548eb` - fix: Move async_get_options_flow to SPVMConfigFlow class
@@ -48,6 +50,8 @@
 - `03e6384` - fix: Critical solar calculation bug (equation of time) ⭐
 - `4e461df` - docs: Improve diagnostic script labels
 - `268f559` - docs: Update documentation for v0.6.3
+- `3903c8f` - docs: Add remaining commits to CHANGELOG
+- `d23db25` - fix: Remove incorrect reserve subtraction from expected production
 
 ---
 

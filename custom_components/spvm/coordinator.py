@@ -156,9 +156,8 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         )
         model = solar_compute(inputs)
 
-        # Degradation correction (linéaire) + réserve + cap
+        # Degradation correction (linéaire) + cap
         expected_w = model.expected_corrected_w * max(0.0, 1.0 - float(self.degradation_pct) / 100.0)
-        expected_w = max(expected_w - float(self.reserve_w), 0.0)
         expected_w = min(expected_w, float(self.cap_max_w))
 
         # KPIs
