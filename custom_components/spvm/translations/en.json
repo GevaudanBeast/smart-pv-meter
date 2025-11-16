@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Configure Smart PV Meter v0.6.3",
-        "description": "Configure your Smart PV Meter with solar physics model. Entities created: sensor.spvm_grid_power_auto, sensor.spvm_surplus_virtual, sensor.spvm_surplus_net_raw, sensor.spvm_surplus_net (use for Solar Optimizer), sensor.spvm_pv_effective_cap_now_w, sensor.spvm_expected_production",
+        "description": "Calculates expected solar production and available surplus to optimize your PV installation. Compatible with Solar Optimizer and bridled installations.",
         "data": {
           "pv_sensor": "PV production sensor (power)",
           "unit_pv": "  → Unit for this sensor (W or kW)",
