@@ -1,151 +1,64 @@
-name: Release SPVM
+name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version (ex: 0.5.1 ou 0.5.6b)"
-        required: true
-        type: string
-      prerelease:
-        description: "Marquer comme pré-release ?"
-        required: false
-        default: "false"
-        type: choice
-        options: ["false", "true"]
+  push:
+    tags:
+      - 'v*.*.*'
 
 permissions:
   contents: write
 
 jobs:
   release:
+    name: Create Release
     runs-on: ubuntu-latest
-
-    env:
-      INTEGRATION_DIR: custom_components/spvm
-      ZIP_PREFIX: smart-pv-meter
-
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Vérif inputs
-        id: meta
-        shell: bash
+      - name: Get version from tag
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Verify version in manifest
         run: |
-          set -e
-          VERSION="${{ inputs.version }}"
-          # Accepte X.Y.Z ou X.Y.Zsuffixe (ex: 0.5.6b, 0.5.1-alpha, 0.5.2rc1)
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+[a-zA-Z0-9._-]*$ ]]; then
-            echo "Version invalide: $VERSION (attendu: X.Y.Z ou X.Y.Zsuffixe)"
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "prerelease=${{ inputs.prerelease }}" >> "$GITHUB_OUTPUT"
-
-      - name: Installer jq & zip
-        run: sudo apt-get update && sudo apt-get install -y jq zip
-
-      - name: Sanity check arborescence
-        shell: bash
-        run: |
-          set -e
-          echo "::group::Liste racine"
-          ls -la
-          echo "::endgroup::"
-          echo "::group::Liste custom_components"
-          ls -la custom_components || true
-          echo "::endgroup::"
-          echo "::group::Liste $INTEGRATION_DIR"
-          ls -la "$INTEGRATION_DIR"
-          echo "::endgroup::"
-
-          if [ ! -f "$INTEGRATION_DIR/manifest.json" ]; then
-            echo "Fichier manquant: $INTEGRATION_DIR/manifest.json"
+          MANIFEST_VERSION=$(jq -r '.version' custom_components/spvm/manifest.json)
+          TAG_VERSION="${{ steps.get_version.outputs.version }}"
+          if [ "$MANIFEST_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: manifest.json version ($MANIFEST_VERSION) does not match tag version ($TAG_VERSION)"
             exit 1
           fi
 
-      - name: Mettre à jour manifest.json (+ hacs.json si présent)
-        shell: bash
+      - name: Create ZIP archive
         run: |
-          set -e
-          VERSION="${{ steps.meta.outputs.version }}"
-          MANIFEST="$INTEGRATION_DIR/manifest.json"
+          cd custom_components
+          zip -r ../spvm-${{ steps.get_version.outputs.version }}.zip spvm/
+          cd ..
 
-          # MAJ manifest.json: "version"
-          tmp="$(mktemp)"
-          jq --arg v "$VERSION" '.version = $v' "$MANIFEST" > "$tmp" && mv "$tmp" "$MANIFEST"
-          echo "manifest.json après MAJ:"
-          cat "$MANIFEST"
-
-          # MAJ hacs.json optionnelle: zip_release + filename versionné
-          if [ -f "hacs.json" ]; then
-            tmp="$(mktemp)"
-            jq --arg fn "${ZIP_PREFIX}-v${VERSION}.zip" '
-              .zip_release = true
-              | .filename = $fn
-              | .render_readme = (has("render_readme") and .render_readme) or true
-            ' hacs.json > "$tmp" && mv "$tmp" hacs.json
-            echo "hacs.json après MAJ:"
-            cat hacs.json
-          fi
-
-      - name: Commit des fichiers versionnés
-        shell: bash
+      - name: Extract changelog for this version
+        id: changelog
         run: |
-          set -e
-          VERSION="${{ steps.meta.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(release): v${VERSION}"
-            git push origin HEAD:${{ github.ref_name }}
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if [ -f CHANGELOG.md ]; then
+            sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' > release_notes.md || echo "## Version $VERSION" > release_notes.md
           else
-            echo "Pas de modifications à committer."
+            echo "## Smart PV Meter v$VERSION" > release_notes.md
+            echo "" >> release_notes.md
+            echo "See README for full documentation." >> release_notes.md
           fi
+          cat release_notes.md
 
-      - name: Créer/Mettre à jour le tag
-        shell: bash
-        run: |
-          set -e
-          VERSION="${{ steps.meta.outputs.version }}"
-          git tag -f "v${VERSION}" || true
-          git push -f origin "v${VERSION}"
-
-      # ===== CORRECTIF HACS: construire un ZIP dont la racine = CONTENU de spvm/ =====
-      - name: Construire l'archive ZIP pour HACS (contenu de spvm/)
-        id: build_zip
-        shell: bash
-        run: |
-          set -e
-          VERSION="${{ steps.meta.outputs.version }}"
-          ZIP_NAME="${ZIP_PREFIX}-v${VERSION}.zip"
-
-          # Crée un répertoire temporaire et copie le CONTENU de spvm/ (et fichiers cachés)
-          tmpdir="$(mktemp -d)"
-          shopt -s dotglob
-          cp -R "${INTEGRATION_DIR}/"* "$tmpdir"/
-          # Inclure également les fichiers cachés (si présents)
-          cp -R "${INTEGRATION_DIR}"/.[!.]* "$tmpdir"/ 2>/dev/null || true
-          shopt -u dotglob
-
-          # Zipper le contenu (la racine du zip = fichiers de spvm/, pas le dossier)
-          (cd "$tmpdir" && zip -r "$GITHUB_WORKSPACE/$ZIP_NAME" .)
-
-          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
-          echo "zip_path=$ZIP_NAME" >> "$GITHUB_OUTPUT"
-
-      - name: Créer la Release GitHub
-        uses: softprops/action-gh-release@v2
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.meta.outputs.version }}
-          name: Smart PV Meter v${{ steps.meta.outputs.version }}
+          files: spvm-${{ steps.get_version.outputs.version }}.zip
+          body_path: release_notes.md
           draft: false
-          prerelease: ${{ steps.meta.outputs.prerelease }}
-          generate_release_notes: true
-          files: |
-            ${{ steps.build_zip.outputs.zip_path }}
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update HACS repository
+        run: |
+          echo "Release ${{ steps.get_version.outputs.version }} published successfully"
+          echo "HACS will automatically detect this release"

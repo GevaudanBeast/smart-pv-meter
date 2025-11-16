@@ -1,5 +1,12 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.6.4 - Release (November 2025)
+
+### Changed
+- Version bump to 0.6.4
+- Updated GitHub workflow for automatic releases on tag push
+- Minor documentation improvements
+
 ## 🐛 Version 0.6.3 - Hotfix (November 2025)
 
 ### Corrections de bugs critiques
