@@ -141,6 +141,69 @@ Après modification :
 
 ---
 
+## 🔧 Configurations spéciales
+
+### Panneaux à inclinaisons multiples
+
+Si vos panneaux ont **différentes inclinaisons**, calculez une moyenne pondérée :
+
+**Exemple :**
+```
+Groupe 1 : 6 × 450W = 2700W à 30° d'inclinaison
+Groupe 2 : 6 × 550W = 3300W à 10° d'inclinaison
+
+Inclinaison moyenne = (2700W × 30° + 3300W × 10°) / 6000W
+                    = (81000 + 33000) / 6000
+                    = 19°
+
+Configuration SPVM :
+  Puissance crête : 6000 W     (total de tous les panneaux)
+  Inclinaison : 19°            (moyenne pondérée)
+```
+
+**Formule générale :**
+```
+inclinaison_moyenne = (puissance1 × inclin1 + puissance2 × inclin2 + ...) / puissance_totale
+```
+
+### Installations écrêtées/limitées
+
+Si votre production est **limitée** (onduleur ou contrat) :
+
+**Exemple :**
+```
+Capacité panneaux : 6000W crête
+Limite onduleur : 3000W max
+
+Configuration SPVM :
+  Puissance crête : 6000 W          (capacité réelle des panneaux)
+  Limite saturation : 3000 W        (cap_max_w)
+  Efficacité système : 0.90
+```
+
+**Pourquoi c'est important :**
+- SPVM calcule la production théorique (ex: 5000W à midi)
+- `cap_max_w` plafonne à votre limite (3000W max)
+- Solar Optimizer reçoit la puissance disponible réelle
+- Le rendement reste cohérent (compare réel vs théorique avant écrêtage)
+
+**Cas fréquents :**
+- Système micro-onduleurs limité par capacité onduleur
+- Contrat réseau limitant l'injection
+- Mode autoconsommation avec bridage de production
+- Installation 6000Wc sur onduleur 3000W (surdimensionnement 2:1)
+
+**Vérification :**
+```yaml
+sensor.spvm_expected_production:
+  state: 3000  # Plafonné même si théorique = 5000W
+  attributes:
+    cap_max_w: 3000
+    panel.peak_w: 6000
+```
+
+---
+
 ## 🔧 Script de diagnostic
 
 **Nouveau (v0.6.3)** : Le script de diagnostic est maintenant inclus dans l'intégration !
