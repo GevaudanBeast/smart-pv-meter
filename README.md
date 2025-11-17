@@ -99,7 +99,58 @@ Each power sensor can now have its own unit configuration:
 
 Configure each sensor's unit separately to ensure accurate calculations!
 
-### 6. Advanced Settings
+### 6. Special Configurations ⚙️
+
+#### Multiple Panel Tilts
+
+If you have panels at **different tilt angles**, calculate a weighted average based on power:
+
+**Example:**
+```
+Group 1: 6 × 450W = 2700W at 30° tilt
+Group 2: 6 × 550W = 3300W at 10° tilt
+
+Weighted average tilt = (2700W × 30° + 3300W × 10°) / 6000W
+                      = (81000 + 33000) / 6000
+                      = 19°
+
+Configuration:
+  panel_peak_power: 6000 W    (total of all panels)
+  panel_tilt: 19°             (weighted average)
+```
+
+**Formula:**
+```
+weighted_tilt = (power1 × tilt1 + power2 × tilt2 + ...) / total_power
+```
+
+#### Capped/Clipped Installations
+
+If your production is **limited** (inverter capacity or grid contract):
+
+**Example:**
+```
+Panel capacity: 6000W peak
+Inverter limit: 3000W max output
+
+Configuration:
+  panel_peak_power: 6000 W      (actual panel capacity)
+  cap_max_w: 3000 W             (production limit)
+  system_efficiency: 0.90
+```
+
+**Why this matters:**
+- SPVM calculates theoretical production (e.g., 5000W at noon)
+- `cap_max_w` clips to your limit (3000W max)
+- Solar Optimizer receives realistic available power
+- Yield ratio stays accurate (compares actual vs theoretical before clipping)
+
+**Common scenarios:**
+- Micro-inverter system limited by inverter capacity
+- Grid contract limiting export power
+- Self-consumption mode with production cap
+
+### 7. Advanced Settings
 - **Reserve (W)** - Battery reserve to keep (default: 150W)
 - **Cap max (W)** - Hard power cap (default: 3000W)
 - **Degradation (%)** - Panel aging/degradation (default: 0%)
