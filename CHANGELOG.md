@@ -1,5 +1,18 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.6.6 - Hotfix HACS Structure (November 2025)
+
+### Fixed
+- ✅ **Fix HACS ZIP structure** : Le ZIP contient maintenant `custom_components/spvm/` au lieu de `spvm/`
+- ✅ **Fix installation HACS** : Correction du problème de structure `spvm/spvm` lors de l'installation
+- ✅ **Fix workflow release** : Le ZIP est créé avec la bonne structure pour HACS
+
+### Technical Details
+- With `"content_in_root": false`, HACS expects ZIP structure: `custom_components/integration_name/`
+- Previous releases had incorrect structure: `spvm/` instead of `custom_components/spvm/`
+- This caused HACS to create `custom_components/spvm/spvm/` structure (double nesting)
+- Workflow now uses: `zip -r spvm.zip custom_components/spvm/`
+
 ## 📦 Version 0.6.5 - Hotfix HACS (November 2025)
 
 ### Fixed
