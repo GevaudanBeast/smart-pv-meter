@@ -1,5 +1,17 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.6.5 - Hotfix HACS (November 2025)
+
+### Fixed
+- ✅ **Fix HACS installation** : Correction de la configuration HACS pour permettre l'installation depuis HACS
+- ✅ **Fix workflow release** : Le fichier ZIP généré s'appelle maintenant `spvm.zip` (sans numéro de version)
+- ✅ **Fix hacs.json** : Le champ `filename` pointe maintenant vers `spvm.zip` au lieu de `spvm-0.6.4.zip`
+
+### Technical Details
+- HACS requires a static filename (without version number) in `hacs.json`
+- The release workflow now creates `spvm.zip` instead of `spvm-{version}.zip`
+- This allows HACS to automatically download the latest release without hardcoding version numbers
+
 ## 📦 Version 0.6.4 - Release (November 2025)
 
 ### Changed
