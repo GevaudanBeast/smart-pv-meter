@@ -31,9 +31,7 @@ jobs:
 
       - name: Create ZIP archive
         run: |
-          cd custom_components
-          zip -r ../spvm.zip spvm/
-          cd ..
+          zip -r spvm.zip custom_components/spvm/
 
       - name: Extract changelog for this version
         id: changelog
