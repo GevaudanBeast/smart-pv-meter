@@ -1,6 +1,6 @@
-# 🎯 Smart PV Meter (SPVM) v0.6.6
+# 🎯 Smart PV Meter (SPVM) v0.6.7
 
-[![Version](https://img.shields.io/badge/version-0.6.6-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Version](https://img.shields.io/badge/version-0.6.7-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -395,7 +395,11 @@ The yield ratio shows performance:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
-### Version 0.6.3 (Current - November 2025)
+### Version 0.6.7 (Current - November 2025)
+- 🐛 **CRITICAL FIX:** ZIP extraction path - files now extracted to correct location
+- 🐛 Fixed double nesting issue in Home Assistant installation
+
+### Version 0.6.3 (November 2025)
 - 🐛 **CRITICAL FIX:** Solar position calculation bug
 - 🐛 Fixed 400 Bad Request in config flow
 - 🐛 Fixed 500 Internal Server Error
@@ -438,4 +442,4 @@ MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Smart PV Meter v0.6.3** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)
+**Smart PV Meter v0.6.7** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)
