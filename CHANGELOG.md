@@ -1,5 +1,17 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.6.7 - Fix ZIP Extraction Path (November 2025)
+
+### Fixed
+- ✅ **Fix ZIP extraction path** : Le ZIP contient maintenant les fichiers directement à la racine (sans préfixe `custom_components/spvm/`)
+- ✅ **Fix double nesting** : Correction du problème où les fichiers étaient extraits dans `/config/custom_components/spvm/custom_components/spvm/`
+
+### Technical Details
+- When Home Assistant extracts the ZIP to `/config/custom_components/spvm/`, it expects the ZIP to contain files directly at root level
+- Previous structure included `custom_components/spvm/` prefix in the ZIP, causing double nesting
+- Workflow now creates ZIP from within the component directory: `cd custom_components/spvm && zip -r ../../spvm.zip .`
+- ZIP now contains: `__init__.py`, `manifest.json`, `translations/`, etc. directly at root
+
 ## 📦 Version 0.6.6 - Hotfix HACS Structure (November 2025)
 
 ### Fixed
