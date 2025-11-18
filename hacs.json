@@ -1,7 +1,7 @@
 {
   "name": "Smart PV Meter",
   "content_in_root": false,
-  "filename": "spvm-0.6.4.zip",
+  "filename": "spvm.zip",
   "render_readme": true,
   "domains": [
     "sensor"
