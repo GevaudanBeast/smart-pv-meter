@@ -59,3 +59,6 @@ Thumbs.db
 
 # Home Assistant
 *.log
+
+# Release artifacts
+*.zip
