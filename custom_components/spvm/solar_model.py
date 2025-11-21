@@ -34,6 +34,7 @@ class SolarInputs:
 
     cloud_pct: Optional[float] = None    # 0..100
     temp_c: Optional[float] = None       # °C
+    lux: Optional[float] = None          # Luminosity (lux) for real-sky correction
 
 
 @dataclass
@@ -46,6 +47,7 @@ class SolarResult:
     poa_clear_wm2: float
     expected_clear_w: float
     expected_corrected_w: float
+    lux_factor: Optional[float] = None  # Lux-based correction factor applied (0..1)
 
 
 def _to_julian_day(dt: datetime) -> float:
@@ -171,6 +173,43 @@ def _temperature_factor(temp_c: Optional[float]) -> float:
     return max(0.5, 1.0 - 0.005 * delta)
 
 
+def _lux_correction_factor(lux: Optional[float], elevation_deg: float) -> Optional[float]:
+    """
+    Correction factor based on actual lux vs theoretical clear-sky lux.
+
+    This provides a real-world correction when cloud_pct underestimates
+    actual sky conditions (e.g., thick clouds vs thin clouds).
+
+    Returns:
+        float: Correction factor (0.1 to 1.0), or None if lux not available
+               or sun too low for reliable calculation.
+    """
+    if lux is None:
+        return None
+
+    # Skip correction when sun is too low (unreliable lux readings)
+    if elevation_deg <= 5.0:
+        return None
+
+    # Theoretical clear-sky lux approximation based on solar elevation
+    # Full sun at zenith ≈ 100,000 lux, scales with sin(elevation)
+    # At 22° elevation: ~37,000 lux theoretical max
+    # Using conservative estimate: 80,000 * sin(elevation)
+    theoretical_lux = 80000.0 * math.sin(math.radians(elevation_deg))
+
+    if theoretical_lux < 100.0:
+        return None
+
+    # Calculate ratio of actual vs theoretical
+    ratio = lux / theoretical_lux
+
+    # Cap at 1.0 (can't produce more than clear-sky) and floor at 0.1
+    # The floor prevents complete zeroing which could cause instability
+    factor = max(0.1, min(1.0, ratio))
+
+    return factor
+
+
 def compute(inputs: SolarInputs) -> SolarResult:
     el_deg, az_deg, dec_deg, _ha = _sun_position(inputs.dt_utc, inputs.lat_deg, inputs.lon_deg)
     inc_deg = _incidence_angle(el_deg, az_deg, inputs.panel_tilt_deg, inputs.panel_azimuth_deg)
@@ -183,8 +222,22 @@ def compute(inputs: SolarInputs) -> SolarResult:
 
     # Expected power (clear sky) before corrections
     expected_clear = poa_clear * inputs.system_efficiency * (inputs.panel_peak_w / 1000.0)  # W/m2 * eff * kWc
-    # Cloud + Temperature corrections
-    expected_corr = expected_clear * _cloud_factor(inputs.cloud_pct) * _temperature_factor(inputs.temp_c)
+
+    # Cloud + Temperature corrections (traditional method)
+    cloud_temp_factor = _cloud_factor(inputs.cloud_pct) * _temperature_factor(inputs.temp_c)
+
+    # Lux-based real-sky correction (more accurate for thick clouds)
+    lux_factor = _lux_correction_factor(inputs.lux, el_deg)
+
+    # Apply corrections: use lux_factor if available, otherwise cloud_temp_factor
+    # When lux is available, it provides a more accurate real-world correction
+    # that captures actual sky conditions (thick vs thin clouds, haze, etc.)
+    if lux_factor is not None:
+        # Lux factor already captures real sky conditions, but still apply temp derating
+        expected_corr = expected_clear * lux_factor * _temperature_factor(inputs.temp_c)
+    else:
+        # Fall back to cloud_pct based correction
+        expected_corr = expected_clear * cloud_temp_factor
 
     return SolarResult(
         elevation_deg=el_deg,
@@ -195,4 +248,5 @@ def compute(inputs: SolarInputs) -> SolarResult:
         poa_clear_wm2=poa_clear,
         expected_clear_w=max(0.0, expected_clear),
         expected_corrected_w=max(0.0, expected_corr),
+        lux_factor=lux_factor,
     )

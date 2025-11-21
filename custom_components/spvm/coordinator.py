@@ -159,6 +159,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             system_efficiency=self.system_eff,
             cloud_pct=cloud,
             temp_c=temp,
+            lux=lux,
         )
         model = solar_compute(inputs)
 
@@ -209,8 +210,13 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             "debug_pv_w": round(pv_w, 1),
             "debug_house_w": round(house_w, 1),
             "debug_surplus_virtual": round(surplus_virtual, 1),
-            ATTR_NOTE: "Physical clear-sky + incidence; cloud & temp corrections; then degradation, reserve, cap.",
+            ATTR_NOTE: "Physical clear-sky + incidence; cloud & temp corrections; lux correction if available; then degradation, reserve, cap.",
         }
+        if model.lux_factor is not None:
+            attrs["lux_factor"] = round(model.lux_factor, 3)
+            attrs["lux_correction_active"] = True
+        else:
+            attrs["lux_correction_active"] = False
         if grid is not None:
             attrs["grid_now"] = grid
         if batt is not None:

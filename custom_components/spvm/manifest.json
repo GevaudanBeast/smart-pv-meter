@@ -1,7 +1,7 @@
 {
   "domain": "spvm",
   "name": "Smart PV Meter",
-  "version": "0.6.7",
+  "version": "0.6.8",
   "documentation": "https://github.com/GevaudanBeast/smart-pv-meter",
   "issue_tracker": "https://github.com/GevaudanBeast/smart-pv-meter/issues",
   "icon": "mdi:solar-power",
