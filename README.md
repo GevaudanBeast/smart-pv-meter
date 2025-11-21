@@ -1,6 +1,6 @@
-# 🎯 Smart PV Meter (SPVM) v0.6.7
+# 🎯 Smart PV Meter (SPVM) v0.6.8
 
-[![Version](https://img.shields.io/badge/version-0.6.7-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Version](https://img.shields.io/badge/version-0.6.8-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -395,7 +395,13 @@ The yield ratio shows performance:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
-### Version 0.6.7 (Current - November 2025)
+### Version 0.6.8 (Current - November 2025)
+- 🆕 **Lux-based correction** - More accurate predictions in cloudy conditions
+- ✨ Uses real lux sensor to detect thick clouds vs thin clouds
+- 📊 New attributes: `lux_factor`, `lux_correction_active`
+- 🎯 Fixes overestimation when cloud_pct underestimates actual conditions
+
+### Version 0.6.7 (November 2025)
 - 🐛 **CRITICAL FIX:** ZIP extraction path - files now extracted to correct location
 - 🐛 Fixed double nesting issue in Home Assistant installation
 
