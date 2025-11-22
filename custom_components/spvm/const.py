@@ -72,6 +72,20 @@ DEF_SITE_ALTITUDE: Final = None
 CONF_SYSTEM_EFFICIENCY: Final = "system_efficiency"     # 0.5 .. 1.0
 DEF_SYSTEM_EFFICIENCY: Final = 0.85
 
+# Correction Lux (v0.6.8+)
+CONF_LUX_MIN_ELEVATION: Final = "lux_min_elevation_deg"    # Élévation min pour activer correction lux
+DEF_LUX_MIN_ELEVATION: Final = 5.0                          # 5° par défaut
+CONF_LUX_FLOOR_FACTOR: Final = "lux_floor_factor"          # Plancher minimum correction (0.01-0.5)
+DEF_LUX_FLOOR_FACTOR: Final = 0.1                           # 10% minimum par défaut
+
+# Ombrage obstacles (arbres, bâtiments)
+CONF_SHADING_WINTER_PCT: Final = "shading_winter_pct"      # Ombrage supplémentaire hiver (%)
+DEF_SHADING_WINTER_PCT: Final = 0.0                         # Pas d'ombrage par défaut
+CONF_SHADING_MONTH_START: Final = "shading_month_start"    # Mois début ombrage (1-12)
+DEF_SHADING_MONTH_START: Final = 11                         # Novembre par défaut
+CONF_SHADING_MONTH_END: Final = "shading_month_end"        # Mois fin ombrage (1-12)
+DEF_SHADING_MONTH_END: Final = 2                            # Février par défaut
+
 # Intervalle / lissage / debug
 CONF_UPDATE_INTERVAL_SECONDS: Final = "update_interval_seconds"
 DEF_UPDATE_INTERVAL: Final = 30
