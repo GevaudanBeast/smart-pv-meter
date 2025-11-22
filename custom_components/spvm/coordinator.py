@@ -27,6 +27,10 @@ from .const import (
     CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH,
     CONF_SITE_LATITUDE, DEF_SITE_LATITUDE, CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE,
     CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE, CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY,
+    # lux correction & seasonal shading
+    CONF_LUX_MIN_ELEVATION, DEF_LUX_MIN_ELEVATION, CONF_LUX_FLOOR_FACTOR, DEF_LUX_FLOOR_FACTOR,
+    CONF_SHADING_WINTER_PCT, DEF_SHADING_WINTER_PCT,
+    CONF_SHADING_MONTH_START, DEF_SHADING_MONTH_START, CONF_SHADING_MONTH_END, DEF_SHADING_MONTH_END,
     # timing
     CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL,
     CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW,
@@ -112,6 +116,15 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         )
         self.system_eff: float = float(data.get(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY))
 
+        # Lux correction parameters (v0.6.9+)
+        self.lux_min_elevation: float = float(data.get(CONF_LUX_MIN_ELEVATION, DEF_LUX_MIN_ELEVATION))
+        self.lux_floor_factor: float = float(data.get(CONF_LUX_FLOOR_FACTOR, DEF_LUX_FLOOR_FACTOR))
+
+        # Seasonal shading parameters (v0.6.9+)
+        self.shading_winter_pct: float = float(data.get(CONF_SHADING_WINTER_PCT, DEF_SHADING_WINTER_PCT))
+        self.shading_month_start: int = int(data.get(CONF_SHADING_MONTH_START, DEF_SHADING_MONTH_START))
+        self.shading_month_end: int = int(data.get(CONF_SHADING_MONTH_END, DEF_SHADING_MONTH_END))
+
         # Timing
         self.update_interval_s: int = int(data.get(CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL))
         self.smoothing_window_s: int = int(data.get(CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW))
@@ -160,6 +173,11 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             cloud_pct=cloud,
             temp_c=temp,
             lux=lux,
+            lux_min_elevation_deg=self.lux_min_elevation,
+            lux_floor_factor=self.lux_floor_factor,
+            shading_winter_pct=self.shading_winter_pct,
+            shading_month_start=self.shading_month_start,
+            shading_month_end=self.shading_month_end,
         )
         model = solar_compute(inputs)
 

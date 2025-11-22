@@ -36,6 +36,15 @@ class SolarInputs:
     temp_c: Optional[float] = None       # °C
     lux: Optional[float] = None          # Luminosity (lux) for real-sky correction
 
+    # Lux correction parameters (v0.6.9+)
+    lux_min_elevation_deg: float = 5.0   # Minimum elevation to use lux correction
+    lux_floor_factor: float = 0.1        # Floor factor to prevent complete zeroing
+
+    # Seasonal shading (trees, buildings) (v0.6.9+)
+    shading_winter_pct: float = 0.0      # Additional shading in winter (%)
+    shading_month_start: int = 11        # Month when shading starts (1-12)
+    shading_month_end: int = 2           # Month when shading ends (1-12)
+
 
 @dataclass
 class SolarResult:
@@ -173,22 +182,29 @@ def _temperature_factor(temp_c: Optional[float]) -> float:
     return max(0.5, 1.0 - 0.005 * delta)
 
 
-def _lux_correction_factor(lux: Optional[float], elevation_deg: float) -> Optional[float]:
+def _lux_correction_factor(lux: Optional[float], elevation_deg: float,
+                           min_elevation: float = 5.0, floor_factor: float = 0.1) -> Optional[float]:
     """
     Correction factor based on actual lux vs theoretical clear-sky lux.
 
     This provides a real-world correction when cloud_pct underestimates
     actual sky conditions (e.g., thick clouds vs thin clouds).
 
+    Args:
+        lux: Actual luminosity reading (lux)
+        elevation_deg: Sun elevation angle (degrees)
+        min_elevation: Minimum elevation to use correction (degrees)
+        floor_factor: Minimum correction factor to prevent complete zeroing (0.01-0.5)
+
     Returns:
-        float: Correction factor (0.1 to 1.0), or None if lux not available
+        float: Correction factor (floor_factor to 1.0), or None if lux not available
                or sun too low for reliable calculation.
     """
     if lux is None:
         return None
 
     # Skip correction when sun is too low (unreliable lux readings)
-    if elevation_deg <= 5.0:
+    if elevation_deg <= min_elevation:
         return None
 
     # Theoretical clear-sky lux approximation based on solar elevation
@@ -203,11 +219,50 @@ def _lux_correction_factor(lux: Optional[float], elevation_deg: float) -> Option
     # Calculate ratio of actual vs theoretical
     ratio = lux / theoretical_lux
 
-    # Cap at 1.0 (can't produce more than clear-sky) and floor at 0.1
+    # Cap at 1.0 (can't produce more than clear-sky) and floor at user-defined minimum
     # The floor prevents complete zeroing which could cause instability
-    factor = max(0.1, min(1.0, ratio))
+    factor = max(floor_factor, min(1.0, ratio))
 
     return factor
+
+
+def _seasonal_shading_factor(dt: datetime, shading_pct: float,
+                             month_start: int, month_end: int) -> float:
+    """
+    Seasonal shading correction for trees or buildings that cast shadows in winter.
+
+    Args:
+        dt: Current datetime
+        shading_pct: Additional shading percentage (0-100%)
+        month_start: Month when shading period starts (1-12, e.g., 11 for November)
+        month_end: Month when shading period ends (1-12, e.g., 2 for February)
+
+    Returns:
+        float: Shading factor (0.0 to 1.0)
+               1.0 = no shading, 0.5 = 50% shading, etc.
+
+    Example:
+        If shading_pct = 30% from November (11) to February (2):
+        - In December: returns 0.7 (30% reduction)
+        - In July: returns 1.0 (no reduction)
+    """
+    if shading_pct <= 0:
+        return 1.0
+
+    current_month = dt.month
+
+    # Handle wrapping (e.g., November to February crosses year boundary)
+    if month_start <= month_end:
+        # No wrapping (e.g., May to September)
+        in_shading_period = month_start <= current_month <= month_end
+    else:
+        # Wrapping (e.g., November to February)
+        in_shading_period = current_month >= month_start or current_month <= month_end
+
+    if in_shading_period:
+        return max(0.0, 1.0 - (shading_pct / 100.0))
+    else:
+        return 1.0
 
 
 def compute(inputs: SolarInputs) -> SolarResult:
@@ -227,17 +282,30 @@ def compute(inputs: SolarInputs) -> SolarResult:
     cloud_temp_factor = _cloud_factor(inputs.cloud_pct) * _temperature_factor(inputs.temp_c)
 
     # Lux-based real-sky correction (more accurate for thick clouds)
-    lux_factor = _lux_correction_factor(inputs.lux, el_deg)
+    lux_factor = _lux_correction_factor(
+        inputs.lux,
+        el_deg,
+        min_elevation=inputs.lux_min_elevation_deg,
+        floor_factor=inputs.lux_floor_factor
+    )
+
+    # Seasonal shading correction (trees, buildings)
+    shading_factor = _seasonal_shading_factor(
+        inputs.dt_utc,
+        inputs.shading_winter_pct,
+        inputs.shading_month_start,
+        inputs.shading_month_end
+    )
 
     # Apply corrections: use lux_factor if available, otherwise cloud_temp_factor
     # When lux is available, it provides a more accurate real-world correction
     # that captures actual sky conditions (thick vs thin clouds, haze, etc.)
     if lux_factor is not None:
-        # Lux factor already captures real sky conditions, but still apply temp derating
-        expected_corr = expected_clear * lux_factor * _temperature_factor(inputs.temp_c)
+        # Lux factor already captures real sky conditions, but still apply temp derating and shading
+        expected_corr = expected_clear * lux_factor * _temperature_factor(inputs.temp_c) * shading_factor
     else:
-        # Fall back to cloud_pct based correction
-        expected_corr = expected_clear * cloud_temp_factor
+        # Fall back to cloud_pct based correction, with shading
+        expected_corr = expected_clear * cloud_temp_factor * shading_factor
 
     return SolarResult(
         elevation_deg=el_deg,
