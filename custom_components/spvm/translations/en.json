@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configure Smart PV Meter v0.6.3",
+        "title": "Configure Smart PV Meter v0.6.9",
         "description": "Calculates expected solar production and available surplus to optimize your PV installation. Compatible with Solar Optimizer and bridled installations.",
         "data": {
           "pv_sensor": "PV production sensor (power)",
@@ -21,6 +21,11 @@
           "reserve_w": "Zendure battery reserve (W) kept permanently",
           "cap_max_w": "Inverter saturation limit (W) - hard cap at 3000W",
           "degradation_pct": "Panel wear / degradation (%)",
+          "lux_min_elevation_deg": "Lux correction: minimum elevation (°) - low reliability threshold",
+          "lux_floor_factor": "Lux correction: minimum floor (0.01-0.5) - prevents zeroing",
+          "shading_winter_pct": "Seasonal shading: winter reduction (%) - trees, buildings",
+          "shading_month_start": "Seasonal shading: start month (1-12) - shading period",
+          "shading_month_end": "Seasonal shading: end month (1-12) - end shading period",
           "panel_peak_power": "Panel peak power (W)",
           "panel_tilt": "Panel tilt angle (0°=horizontal, 90°=vertical)",
           "panel_azimuth": "Panel azimuth (0°=North, 90°=East, 180°=South, 270°=West)",
@@ -38,7 +43,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configure SPVM Options v0.6.3",
+        "title": "Configure SPVM Options v0.6.9",
         "description": "Modify sensors and parameters (solar model)",
         "data": {
           "pv_sensor": "PV production sensor",
@@ -57,6 +62,11 @@
           "reserve_w": "Battery reserve (W)",
           "cap_max_w": "System cap (W)",
           "degradation_pct": "Degradation (%)",
+          "lux_min_elevation_deg": "Lux: min elevation (°)",
+          "lux_floor_factor": "Lux: floor (0.01-0.5)",
+          "shading_winter_pct": "Shading: reduction (%)",
+          "shading_month_start": "Shading: start (month)",
+          "shading_month_end": "Shading: end (month)",
           "panel_peak_power": "Panel peak power (W)",
           "panel_tilt": "Panel tilt (°)",
           "panel_azimuth": "Panel azimuth (°)",
