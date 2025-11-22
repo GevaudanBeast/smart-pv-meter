@@ -1,5 +1,53 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.6.9 - Configurable Lux Correction & Seasonal Shading (November 2025)
+
+### Added
+- ✨ **Configurable lux correction parameters** - Fine-tune predictions based on your installation
+  - `lux_min_elevation_deg` (default: 5°) - Minimum elevation to use lux correction
+  - `lux_floor_factor` (default: 0.1) - Minimum correction factor floor (0.01-0.5)
+- 🌲 **Seasonal shading support** - Compensate for trees, buildings casting shadows
+  - `shading_winter_pct` (default: 0%) - Additional shading percentage in winter
+  - `shading_month_start` (default: 11) - Month when shading period starts
+  - `shading_month_end` (default: 2) - Month when shading period ends
+- 📖 **Complete user guide** - [PARAMETRES_CORRECTION.md](PARAMETRES_CORRECTION.md) with examples and FAQ
+
+### Improved
+- 🎯 **More accurate predictions at low sun angles** - Configurable lux floor prevents overestimation
+- 🌤️ **Better thick cloud detection** - Lower lux_floor_factor (0.02-0.05) for very cloudy conditions
+- 📅 **Year-wrapping logic** - Shading periods crossing year boundary (Nov→Feb) handled automatically
+
+### Use Cases
+1. **Trees blocking winter sun** - Set shading_winter_pct to reduce predictions in winter months
+2. **Very overcast conditions** - Lower lux_floor_factor to allow predictions down to 2-5%
+3. **Buildings casting shadows** - Define custom shading period (e.g., June-August for high sun)
+
+### Technical Details
+- `_lux_correction_factor()` now accepts configurable min_elevation and floor_factor parameters
+- New `_seasonal_shading_factor()` function applies temporal corrections
+- All corrections cumulative: lux × temperature × shading
+- Configuration via Home Assistant UI (Settings → Devices & Services → SPVM → Configure)
+
+### Documentation
+- Added PARAMETRES_CORRECTION.md with calibration guide
+- 3 detailed use case examples
+- FAQ section
+- Monitoring section showing how to verify corrections
+
+## 📦 Version 0.6.8 - Lux-based Correction (November 2025)
+
+### Added
+- 🆕 **Lux-based correction** - More accurate predictions in cloudy conditions
+- ✨ Uses real lux sensor to detect thick clouds vs thin clouds
+- 📊 New attributes: `lux_factor`, `lux_correction_active`, `lux_now`
+- 🎯 Fixes overestimation when cloud_pct underestimates actual conditions
+
+### Technical Details
+- Compares actual lux vs theoretical clear-sky lux (80000 × sin(elevation))
+- Minimum elevation 5° to avoid unreliable low-sun readings
+- Floor factor 0.1 prevents complete zeroing
+- Only activates when lux sensor available and sun > 5° elevation
+
 ## 📦 Version 0.6.7 - Fix ZIP Extraction Path (November 2025)
 
 ### Fixed

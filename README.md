@@ -1,6 +1,6 @@
-# 🎯 Smart PV Meter (SPVM) v0.6.8
+# 🎯 Smart PV Meter (SPVM) v0.6.9
 
-[![Version](https://img.shields.io/badge/version-0.6.8-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Version](https://img.shields.io/badge/version-0.6.9-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -150,7 +150,35 @@ Configuration:
 - Grid contract limiting export power
 - Self-consumption mode with production cap
 
-### 7. Advanced Settings
+### 7. Correction Parameters (v0.6.9+) 🎛️
+
+Fine-tune SPVM predictions for your specific installation conditions:
+
+#### Lux Correction (Cloudy Weather)
+| Parameter | Description | Default | Range |
+|-----------|-------------|---------|-------|
+| `lux_min_elevation_deg` | Minimum sun elevation to use lux correction | 5° | 0-15° |
+| `lux_floor_factor` | Minimum correction floor (prevents zeroing) | 0.1 (10%) | 0.01-0.5 |
+
+**When to adjust:**
+- **Lux overestimates on thick clouds** → Lower `lux_floor_factor` to 0.02-0.05
+- **Lux readings erratic at low sun** → Increase `lux_min_elevation_deg` to 8-10°
+
+#### Seasonal Shading (Trees, Buildings)
+| Parameter | Description | Default | Range |
+|-----------|-------------|---------|-------|
+| `shading_winter_pct` | Additional shading in winter (%) | 0% | 0-100% |
+| `shading_month_start` | Month when shading starts | 11 (Nov) | 1-12 |
+| `shading_month_end` | Month when shading ends | 2 (Feb) | 1-12 |
+
+**Example scenarios:**
+- **Trees block sun in winter:** Set `shading_winter_pct: 40`, period Nov-Feb
+- **Building shadows in summer:** Set `shading_winter_pct: 20`, period Jun-Aug
+- **Year-round obstacle:** Set period Jan-Dec
+
+**📖 Complete guide:** See [PARAMETRES_CORRECTION.md](PARAMETRES_CORRECTION.md) for calibration instructions and use cases.
+
+### 8. Advanced Settings
 - **Reserve (W)** - Battery reserve to keep (default: 150W)
 - **Cap max (W)** - Hard power cap (default: 3000W)
 - **Degradation (%)** - Panel aging/degradation (default: 0%)
@@ -395,7 +423,13 @@ The yield ratio shows performance:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
-### Version 0.6.8 (Current - November 2025)
+### Version 0.6.9 (Current - November 2025)
+- 🎛️ **Configurable lux correction** - Fine-tune `lux_min_elevation_deg` and `lux_floor_factor`
+- 🌲 **Seasonal shading support** - Compensate for trees/buildings blocking sun
+- 📖 **Complete user guide** - [PARAMETRES_CORRECTION.md](PARAMETRES_CORRECTION.md) with calibration examples
+- 🎯 Better accuracy at low sun angles and very cloudy conditions
+
+### Version 0.6.8 (November 2025)
 - 🆕 **Lux-based correction** - More accurate predictions in cloudy conditions
 - ✨ Uses real lux sensor to detect thick clouds vs thin clouds
 - 📊 New attributes: `lux_factor`, `lux_correction_active`
@@ -448,4 +482,4 @@ MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Smart PV Meter v0.6.7** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)
+**Smart PV Meter v0.6.9** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)
