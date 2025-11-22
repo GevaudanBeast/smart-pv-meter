@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configurer Smart PV Meter v0.6.3",
+        "title": "Configurer Smart PV Meter v0.6.9",
         "description": "Calcule la production solaire attendue et le surplus disponible pour optimiser votre installation photovoltaïque. Compatible avec Solar Optimizer et installations bridées.",
         "data": {
           "pv_sensor": "Capteur de production PV (puissance)",
@@ -21,6 +21,11 @@
           "reserve_w": "Réserve batterie Zendure (W) gardée en permanence",
           "cap_max_w": "Limite onduleur (W) — cap dur à 3000W",
           "degradation_pct": "Usure / dégradation des panneaux (%)",
+          "lux_min_elevation_deg": "Correction lux : élévation minimale (°) — seuil bas de fiabilité",
+          "lux_floor_factor": "Correction lux : plancher minimum (0.01-0.5) — évite le zéro absolu",
+          "shading_winter_pct": "Ombrage saisonnier : réduction hivernale (%) — arbres, bâtiments",
+          "shading_month_start": "Ombrage saisonnier : mois de début (1-12) — période ombragée",
+          "shading_month_end": "Ombrage saisonnier : mois de fin (1-12) — fin période ombragée",
           "panel_peak_power": "Puissance crête panneaux (W)",
           "panel_tilt": "Inclinaison panneaux (0°=horizontal, 90°=vertical)",
           "panel_azimuth": "Orientation panneaux (0°=Nord, 90°=Est, 180°=Sud, 270°=Ouest)",
@@ -38,7 +43,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Configurer les options SPVM v0.6.3",
+        "title": "Configurer les options SPVM v0.6.9",
         "description": "Modifier les capteurs et paramètres (modèle solaire)",
         "data": {
           "pv_sensor": "Capteur production PV",
@@ -57,6 +62,11 @@
           "reserve_w": "Réserve batterie (W)",
           "cap_max_w": "Cap système (W)",
           "degradation_pct": "Dégradation (%)",
+          "lux_min_elevation_deg": "Lux : élévation min (°)",
+          "lux_floor_factor": "Lux : plancher (0.01-0.5)",
+          "shading_winter_pct": "Ombrage : réduction (%)",
+          "shading_month_start": "Ombrage : début (mois)",
+          "shading_month_end": "Ombrage : fin (mois)",
           "panel_peak_power": "Puissance crête (W)",
           "panel_tilt": "Inclinaison (°)",
           "panel_azimuth": "Orientation (°)",
