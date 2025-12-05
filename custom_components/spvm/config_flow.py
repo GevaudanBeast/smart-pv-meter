@@ -258,7 +258,7 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
         """Return the options flow handler."""
-        return SPVMOptionsFlowHandler(config_entry)
+        return SPVMOptionsFlowHandler()
 
 
 class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
