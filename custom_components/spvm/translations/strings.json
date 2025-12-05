@@ -5,6 +5,12 @@
       "user": {
         "title": "Smart PV Meter Configuration"
       }
+    },
+    "error": {
+      "required": "This field is required",
+      "invalid_choice": "Invalid choice",
+      "unknown": "Unknown error occurred during configuration. Please check the logs for details.",
+      "schema_error": "Error loading configuration form. Please check the logs and try again."
     }
   }
 }
