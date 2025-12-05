@@ -1,6 +1,6 @@
-# 🎯 Smart PV Meter (SPVM) v0.6.9
+# 🎯 Smart PV Meter (SPVM) v0.7.1
 
-[![Version](https://img.shields.io/badge/version-0.6.9-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Version](https://img.shields.io/badge/version-0.7.1-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
