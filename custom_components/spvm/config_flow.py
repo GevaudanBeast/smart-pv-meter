@@ -96,129 +96,139 @@ def _merge_defaults(hass: HomeAssistant, cur: dict | None) -> dict:
     return d
 
 def _schema(hass: HomeAssistant, cur: dict | None) -> vol.Schema:
-    v = _merge_defaults(hass, cur)
-    schema = {}
+    """Build configuration schema with robust error handling."""
+    try:
+        v = _merge_defaults(hass, cur)
+        schema = {}
 
-    # === CAPTEURS DE PUISSANCE + UNITÉS ===
+        # === CAPTEURS DE PUISSANCE + UNITÉS ===
 
-    # PV sensor (requis) + unité
-    if v.get(CONF_PV_SENSOR):
-        schema[vol.Required(CONF_PV_SENSOR, default=v[CONF_PV_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Required(CONF_PV_SENSOR)] = _ent_sel()
-    schema[vol.Optional(CONF_UNIT_PV, default=v.get(CONF_UNIT_PV, DEF_UNIT_PV))] = vol.In([UNIT_W, UNIT_KW])
-
-    # House sensor (requis) + unité
-    if v.get(CONF_HOUSE_SENSOR):
-        schema[vol.Required(CONF_HOUSE_SENSOR, default=v[CONF_HOUSE_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Required(CONF_HOUSE_SENSOR)] = _ent_sel()
-    schema[vol.Optional(CONF_UNIT_HOUSE, default=v.get(CONF_UNIT_HOUSE, DEF_UNIT_HOUSE))] = vol.In([UNIT_W, UNIT_KW])
-
-    # Grid sensor (optionnel) + unité
-    if v.get(CONF_GRID_POWER_SENSOR):
-        schema[vol.Optional(CONF_GRID_POWER_SENSOR, default=v[CONF_GRID_POWER_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Optional(CONF_GRID_POWER_SENSOR)] = _ent_sel()
-    schema[vol.Optional(CONF_UNIT_GRID, default=v.get(CONF_UNIT_GRID, DEF_UNIT_GRID))] = vol.In([UNIT_W, UNIT_KW])
-
-    # Battery sensor (optionnel) + unité
-    if v.get(CONF_BATTERY_SENSOR):
-        schema[vol.Optional(CONF_BATTERY_SENSOR, default=v[CONF_BATTERY_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Optional(CONF_BATTERY_SENSOR)] = _ent_sel()
-    schema[vol.Optional(CONF_UNIT_BATTERY, default=v.get(CONF_UNIT_BATTERY, DEF_UNIT_BATTERY))] = vol.In([UNIT_W, UNIT_KW])
-
-    # === CAPTEURS ENVIRONNEMENT ===
-
-    # Lux sensor (optionnel)
-    if v.get(CONF_LUX_SENSOR):
-        schema[vol.Optional(CONF_LUX_SENSOR, default=v[CONF_LUX_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Optional(CONF_LUX_SENSOR)] = _ent_sel()
-
-    # Temperature sensor (optionnel) + unité
-    if v.get(CONF_TEMP_SENSOR):
-        schema[vol.Optional(CONF_TEMP_SENSOR, default=v[CONF_TEMP_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Optional(CONF_TEMP_SENSOR)] = _ent_sel()
-    ut = v.get(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
-    schema[vol.Optional(CONF_UNIT_TEMP, default=ut)] = vol.In([UNIT_C, UNIT_F])
-
-    # Humidity sensor (optionnel)
-    if v.get(CONF_HUM_SENSOR):
-        schema[vol.Optional(CONF_HUM_SENSOR, default=v[CONF_HUM_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Optional(CONF_HUM_SENSOR)] = _ent_sel()
-
-    # Cloud cover sensor (optionnel)
-    if v.get(CONF_CLOUD_SENSOR):
-        schema[vol.Optional(CONF_CLOUD_SENSOR, default=v[CONF_CLOUD_SENSOR])] = _ent_sel()
-    else:
-        schema[vol.Optional(CONF_CLOUD_SENSOR)] = _ent_sel()
-
-    # === PARAMÈTRES SYSTÈME ===
-
-    # Numériques (coercitions sûres)
-    def opt_num(key, default_val):
-        curv = v.get(key, default_val)
-        # pas de default si encore indéfini
-        if curv in (None, "", vol.UNDEFINED):
-            schema[vol.Optional(key)] = vol.Coerce(float)
+        # PV sensor (requis) + unité
+        if v.get(CONF_PV_SENSOR):
+            schema[vol.Required(CONF_PV_SENSOR, default=v[CONF_PV_SENSOR])] = _ent_sel()
         else:
-            schema[vol.Optional(key, default=curv)] = vol.Coerce(float)
+            schema[vol.Required(CONF_PV_SENSOR)] = _ent_sel()
+        schema[vol.Optional(CONF_UNIT_PV, default=v.get(CONF_UNIT_PV, DEF_UNIT_PV))] = vol.In([UNIT_W, UNIT_KW])
 
-    def opt_int(key, default_val):
-        curv = v.get(key, default_val)
-        if curv in (None, "", vol.UNDEFINED):
-            schema[vol.Optional(key)] = vol.Coerce(int)
+        # House sensor (requis) + unité
+        if v.get(CONF_HOUSE_SENSOR):
+            schema[vol.Required(CONF_HOUSE_SENSOR, default=v[CONF_HOUSE_SENSOR])] = _ent_sel()
         else:
-            schema[vol.Optional(key, default=curv)] = vol.Coerce(int)
+            schema[vol.Required(CONF_HOUSE_SENSOR)] = _ent_sel()
+        schema[vol.Optional(CONF_UNIT_HOUSE, default=v.get(CONF_UNIT_HOUSE, DEF_UNIT_HOUSE))] = vol.In([UNIT_W, UNIT_KW])
 
-    # Modèle solaire
-    opt_num(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER)
-    opt_num(CONF_PANEL_TILT, DEF_PANEL_TILT)
-    opt_num(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH)
+        # Grid sensor (optionnel) + unité
+        if v.get(CONF_GRID_POWER_SENSOR):
+            schema[vol.Optional(CONF_GRID_POWER_SENSOR, default=v[CONF_GRID_POWER_SENSOR])] = _ent_sel()
+        else:
+            schema[vol.Optional(CONF_GRID_POWER_SENSOR)] = _ent_sel()
+        schema[vol.Optional(CONF_UNIT_GRID, default=v.get(CONF_UNIT_GRID, DEF_UNIT_GRID))] = vol.In([UNIT_W, UNIT_KW])
 
-    # GPS (HA si dispo, sinon champ sans default)
-    lat_default = v.get(CONF_SITE_LATITUDE, DEF_SITE_LATITUDE)
-    lon_default = v.get(CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE)
-    alt_default = v.get(CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE)
+        # Battery sensor (optionnel) + unité
+        if v.get(CONF_BATTERY_SENSOR):
+            schema[vol.Optional(CONF_BATTERY_SENSOR, default=v[CONF_BATTERY_SENSOR])] = _ent_sel()
+        else:
+            schema[vol.Optional(CONF_BATTERY_SENSOR)] = _ent_sel()
+        schema[vol.Optional(CONF_UNIT_BATTERY, default=v.get(CONF_UNIT_BATTERY, DEF_UNIT_BATTERY))] = vol.In([UNIT_W, UNIT_KW])
 
-    if lat_default in (None, "", vol.UNDEFINED):
-        schema[vol.Optional(CONF_SITE_LATITUDE)] = vol.Coerce(float)
-    else:
-        schema[vol.Optional(CONF_SITE_LATITUDE, default=lat_default)] = vol.Coerce(float)
+        # === CAPTEURS ENVIRONNEMENT ===
 
-    if lon_default in (None, "", vol.UNDEFINED):
-        schema[vol.Optional(CONF_SITE_LONGITUDE)] = vol.Coerce(float)
-    else:
-        schema[vol.Optional(CONF_SITE_LONGITUDE, default=lon_default)] = vol.Coerce(float)
+        # Lux sensor (optionnel)
+        if v.get(CONF_LUX_SENSOR):
+            schema[vol.Optional(CONF_LUX_SENSOR, default=v[CONF_LUX_SENSOR])] = _ent_sel()
+        else:
+            schema[vol.Optional(CONF_LUX_SENSOR)] = _ent_sel()
 
-    if alt_default in (None, "", vol.UNDEFINED):
-        schema[vol.Optional(CONF_SITE_ALTITUDE)] = vol.Coerce(float)
-    else:
-        schema[vol.Optional(CONF_SITE_ALTITUDE, default=alt_default)] = vol.Coerce(float)
+        # Temperature sensor (optionnel) + unité
+        if v.get(CONF_TEMP_SENSOR):
+            schema[vol.Optional(CONF_TEMP_SENSOR, default=v[CONF_TEMP_SENSOR])] = _ent_sel()
+        else:
+            schema[vol.Optional(CONF_TEMP_SENSOR)] = _ent_sel()
+        ut = v.get(CONF_UNIT_TEMP, DEF_UNIT_TEMP)
+        schema[vol.Optional(CONF_UNIT_TEMP, default=ut)] = vol.In([UNIT_C, UNIT_F])
 
-    opt_num(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY)
+        # Humidity sensor (optionnel)
+        if v.get(CONF_HUM_SENSOR):
+            schema[vol.Optional(CONF_HUM_SENSOR, default=v[CONF_HUM_SENSOR])] = _ent_sel()
+        else:
+            schema[vol.Optional(CONF_HUM_SENSOR)] = _ent_sel()
 
-    # Réserve / cap / vieillissement
-    opt_num(CONF_RESERVE_W, DEF_RESERVE_W)
-    opt_num(CONF_CAP_MAX_W, DEF_CAP_MAX_W)
-    opt_num(CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT)
+        # Cloud cover sensor (optionnel)
+        if v.get(CONF_CLOUD_SENSOR):
+            schema[vol.Optional(CONF_CLOUD_SENSOR, default=v[CONF_CLOUD_SENSOR])] = _ent_sel()
+        else:
+            schema[vol.Optional(CONF_CLOUD_SENSOR)] = _ent_sel()
 
-    # Correction parameters (v0.6.9)
-    opt_num(CONF_LUX_MIN_ELEVATION, DEF_LUX_MIN_ELEVATION)
-    opt_num(CONF_LUX_FLOOR_FACTOR, DEF_LUX_FLOOR_FACTOR)
-    opt_num(CONF_SHADING_WINTER_PCT, DEF_SHADING_WINTER_PCT)
-    opt_int(CONF_SHADING_MONTH_START, DEF_SHADING_MONTH_START)
-    opt_int(CONF_SHADING_MONTH_END, DEF_SHADING_MONTH_END)
+        # === PARAMÈTRES SYSTÈME ===
 
-    # Timing
-    opt_int(CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL)
-    opt_int(CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW)
+        # Numériques (coercitions sûres)
+        def opt_num(key, default_val):
+            curv = v.get(key, default_val)
+            # pas de default si encore indéfini
+            if curv in (None, "", vol.UNDEFINED):
+                schema[vol.Optional(key)] = vol.Coerce(float)
+            else:
+                schema[vol.Optional(key, default=curv)] = vol.Coerce(float)
 
-    return vol.Schema(schema)
+        def opt_int(key, default_val):
+            curv = v.get(key, default_val)
+            if curv in (None, "", vol.UNDEFINED):
+                schema[vol.Optional(key)] = vol.Coerce(int)
+            else:
+                schema[vol.Optional(key, default=curv)] = vol.Coerce(int)
+
+        # Modèle solaire
+        opt_num(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER)
+        opt_num(CONF_PANEL_TILT, DEF_PANEL_TILT)
+        opt_num(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH)
+
+        # GPS (HA si dispo, sinon champ sans default)
+        lat_default = v.get(CONF_SITE_LATITUDE, DEF_SITE_LATITUDE)
+        lon_default = v.get(CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE)
+        alt_default = v.get(CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE)
+
+        if lat_default in (None, "", vol.UNDEFINED):
+            schema[vol.Optional(CONF_SITE_LATITUDE)] = vol.Coerce(float)
+        else:
+            schema[vol.Optional(CONF_SITE_LATITUDE, default=lat_default)] = vol.Coerce(float)
+
+        if lon_default in (None, "", vol.UNDEFINED):
+            schema[vol.Optional(CONF_SITE_LONGITUDE)] = vol.Coerce(float)
+        else:
+            schema[vol.Optional(CONF_SITE_LONGITUDE, default=lon_default)] = vol.Coerce(float)
+
+        if alt_default in (None, "", vol.UNDEFINED):
+            schema[vol.Optional(CONF_SITE_ALTITUDE)] = vol.Coerce(float)
+        else:
+            schema[vol.Optional(CONF_SITE_ALTITUDE, default=alt_default)] = vol.Coerce(float)
+
+        opt_num(CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY)
+
+        # Réserve / cap / vieillissement
+        opt_num(CONF_RESERVE_W, DEF_RESERVE_W)
+        opt_num(CONF_CAP_MAX_W, DEF_CAP_MAX_W)
+        opt_num(CONF_DEGRADATION_PCT, DEF_DEGRADATION_PCT)
+
+        # Correction parameters (v0.6.9)
+        opt_num(CONF_LUX_MIN_ELEVATION, DEF_LUX_MIN_ELEVATION)
+        opt_num(CONF_LUX_FLOOR_FACTOR, DEF_LUX_FLOOR_FACTOR)
+        opt_num(CONF_SHADING_WINTER_PCT, DEF_SHADING_WINTER_PCT)
+        opt_int(CONF_SHADING_MONTH_START, DEF_SHADING_MONTH_START)
+        opt_int(CONF_SHADING_MONTH_END, DEF_SHADING_MONTH_END)
+
+        # Timing
+        opt_int(CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL)
+        opt_int(CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW)
+
+        return vol.Schema(schema)
+
+    except Exception as err:
+        _LOGGER.error(f"SPVM _schema: Fatal error building schema: {err}", exc_info=True)
+        # Return minimal schema with only required fields
+        return vol.Schema({
+            vol.Required(CONF_PV_SENSOR): _ent_sel(),
+            vol.Required(CONF_HOUSE_SENSOR): _ent_sel(),
+        })
 
 def _validate_required(user_input: dict) -> dict:
     errors: dict = {}
