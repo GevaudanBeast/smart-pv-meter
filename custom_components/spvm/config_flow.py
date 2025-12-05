@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
+
+_LOGGER = logging.getLogger(__name__)
 
 from .const import (
     DOMAIN, DEFAULT_ENTRY_TITLE,
@@ -255,16 +258,42 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
-        data_cur = dict(self.config_entry.data or {})
-        opts_cur = dict(self.config_entry.options or {})
-        merged = {**data_cur, **opts_cur}
+        try:
+            data_cur = dict(self.config_entry.data or {})
+            opts_cur = dict(self.config_entry.options or {})
+            merged = {**data_cur, **opts_cur}
 
-        if user_input is not None:
-            errors = _validate_required(user_input)
-            if errors:
-                return self.async_show_form(step_id="init", data_schema=_schema(self.hass, merged), errors=errors)
+            if user_input is not None:
+                try:
+                    errors = _validate_required(user_input)
+                    if errors:
+                        _LOGGER.warning(f"SPVM config validation errors: {errors}")
+                        return self.async_show_form(step_id="init", data_schema=_schema(self.hass, merged), errors=errors)
 
-            clean = {k: user_input.get(k) for k in ALL_KEYS if k in user_input}
-            return self.async_create_entry(title="", data=clean)
+                    clean = {k: user_input.get(k) for k in ALL_KEYS if k in user_input}
+                    return self.async_create_entry(title="", data=clean)
+                except Exception as err:
+                    _LOGGER.error(f"SPVM config flow error during validation: {err}", exc_info=True)
+                    return self.async_show_form(
+                        step_id="init",
+                        data_schema=_schema(self.hass, merged),
+                        errors={"base": "unknown"}
+                    )
 
-        return self.async_show_form(step_id="init", data_schema=_schema(self.hass, merged), errors={})
+            return self.async_show_form(step_id="init", data_schema=_schema(self.hass, merged), errors={})
+        except Exception as err:
+            _LOGGER.error(f"SPVM config flow error during form display: {err}", exc_info=True)
+            # Fallback: créer un schéma minimal avec seulement les champs requis
+            try:
+                fallback_schema = vol.Schema({
+                    vol.Required(CONF_PV_SENSOR): _ent_sel(),
+                    vol.Required(CONF_HOUSE_SENSOR): _ent_sel(),
+                })
+                return self.async_show_form(
+                    step_id="init",
+                    data_schema=fallback_schema,
+                    errors={"base": "schema_error"}
+                )
+            except Exception as fallback_err:
+                _LOGGER.error(f"SPVM config flow fallback also failed: {fallback_err}", exc_info=True)
+                raise

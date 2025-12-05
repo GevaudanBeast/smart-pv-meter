@@ -67,6 +67,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.hass = hass
         self.entry = entry
+        self._last_pv_w: Optional[float] = None  # Cache dernière valeur PV pour tolérance
 
         data = {**(entry.data or {}), **(entry.options or {})}
 
@@ -139,8 +140,11 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
     async def _async_update_data(self) -> SPVMData:
         """Compute expected production (W) and KPIs with physical model."""
         # Read current states (inputs)
-        pv = _safe_float(self.hass.states.get(self.pv_entity))
-        house = _safe_float(self.hass.states.get(self.house_entity))
+        pv_state = self.hass.states.get(self.pv_entity)
+        house_state = self.hass.states.get(self.house_entity)
+
+        pv = _safe_float(pv_state)
+        house = _safe_float(house_state)
         grid = _safe_float(self.hass.states.get(self.grid_entity)) if self.grid_entity else None
         batt = _safe_float(self.hass.states.get(self.batt_entity)) if self.batt_entity else None
         lux = _safe_float(self.hass.states.get(self.lux_entity)) if self.lux_entity else None
@@ -148,16 +152,31 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         hum = _safe_float(self.hass.states.get(self.hum_entity)) if self.hum_entity else None
         cloud = _safe_float(self.hass.states.get(self.cloud_entity)) if self.cloud_entity else None
 
+        # Log detailed sensor state for debugging
         if pv is None:
-            raise UpdateFailed("pv_sensor has no numeric state")
+            pv_state_str = pv_state.state if pv_state else "MISSING"
+            _LOGGER.warning(
+                f"PV sensor ({self.pv_entity}) has non-numeric state: '{pv_state_str}'. "
+                f"Using last known value: {self._last_pv_w}W"
+            )
+            if self._last_pv_w is not None:
+                pv = self._last_pv_w / (KW_TO_W if self.unit_pv == UNIT_KW else 1.0)
+            else:
+                raise UpdateFailed(f"pv_sensor has no numeric state ('{pv_state_str}') and no cached value available")
+
         if house is None:
-            raise UpdateFailed("house_sensor has no numeric state")
+            house_state_str = house_state.state if house_state else "MISSING"
+            _LOGGER.warning(f"House sensor ({self.house_entity}) has non-numeric state: '{house_state_str}'")
+            raise UpdateFailed(f"house_sensor has no numeric state ('{house_state_str}')")
 
         # Convert to W per sensor unit
         pv_w = pv * (KW_TO_W if self.unit_pv == UNIT_KW else 1.0)
         house_w = house * (KW_TO_W if self.unit_house == UNIT_KW else 1.0)
         grid_w = grid * (KW_TO_W if self.unit_grid == UNIT_KW else 1.0) if grid is not None else None
         batt_w = batt * (KW_TO_W if self.unit_battery == UNIT_KW else 1.0) if batt is not None else None
+
+        # Cache dernière valeur PV valide pour tolérance aux erreurs temporaires
+        self._last_pv_w = pv_w
 
         # ---- Physical solar model ----
         now_utc = datetime.now(timezone.utc)
@@ -184,6 +203,38 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         # Degradation correction (linéaire) + cap
         expected_w = model.expected_corrected_w * max(0.0, 1.0 - float(self.degradation_pct) / 100.0)
         expected_w = min(expected_w, float(self.cap_max_w))
+
+        # Logs de diagnostic détaillés pour comprendre les estimations faibles
+        _LOGGER.info(
+            f"SPVM DIAGNOSTIC - Production Estimate Breakdown:\n"
+            f"  Solar Model Params:\n"
+            f"    - panel_peak_w: {self.panel_peak_w}W\n"
+            f"    - system_efficiency: {self.system_eff}\n"
+            f"    - panel_tilt: {self.panel_tilt_deg}°\n"
+            f"    - panel_azimuth: {self.panel_az_deg}°\n"
+            f"    - site_lat/lon: {self.site_lat:.2f}/{self.site_lon:.2f}\n"
+            f"  Solar Geometry:\n"
+            f"    - elevation: {model.elevation_deg:.1f}°\n"
+            f"    - azimuth: {model.azimuth_deg:.1f}°\n"
+            f"    - incidence: {model.incidence_deg:.1f}°\n"
+            f"  Irradiance:\n"
+            f"    - GHI clear-sky: {model.ghi_clear_wm2:.1f} W/m²\n"
+            f"    - POA clear-sky: {model.poa_clear_wm2:.1f} W/m²\n"
+            f"  Expected Power (step-by-step):\n"
+            f"    - Clear-sky (before corrections): {model.expected_clear_w:.1f}W\n"
+            f"    - After cloud/temp/lux corrections: {model.expected_corrected_w:.1f}W\n"
+            f"    - After degradation ({self.degradation_pct}%): {expected_w:.1f}W (before cap)\n"
+            f"    - Final (after cap {self.cap_max_w}W): {expected_w:.1f}W\n"
+            f"  Correction Factors:\n"
+            f"    - Lux correction: {model.lux_factor if model.lux_factor is not None else 'N/A (using cloud_pct)'}\n"
+            f"    - Lux value: {lux if lux is not None else 'N/A'}\n"
+            f"    - Cloud coverage: {cloud if cloud is not None else 'N/A'}%\n"
+            f"    - Temperature: {temp if temp is not None else 'N/A'}°C\n"
+            f"  Current Production:\n"
+            f"    - PV actual: {pv_w:.1f}W\n"
+            f"    - PV expected: {expected_w:.1f}W\n"
+            f"    - Yield ratio: {(pv_w/expected_w*100) if expected_w > 1e-6 else 0:.1f}%"
+        )
 
         # KPIs
         yield_ratio_pct = (pv_w / expected_w) * 100.0 if expected_w > 1e-6 else None
