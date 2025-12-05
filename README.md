@@ -1,6 +1,6 @@
-# 🎯 Smart PV Meter (SPVM) v0.7.1
+# 🎯 Smart PV Meter (SPVM) v0.7.2
 
-[![Version](https://img.shields.io/badge/version-0.7.1-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Version](https://img.shields.io/badge/version-0.7.2-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -62,9 +62,34 @@ Then restart Home Assistant.
 ### 3. Optional Sensors (Recommended)
 - **Grid power sensor** - Grid import/export (+/−)
 - **Battery sensor** - Battery charge/discharge (+/−)
-- **Brightness sensor (lux)** - For better cloud detection
+- **Brightness sensor (lux)** - For better cloud detection ⚠️ **See placement requirements below**
 - **Temperature sensor** - For temperature derating
 - **Cloud coverage sensor** - Direct cloud percentage (0-100%)
+
+#### ⚠️ Lux Sensor Placement Requirements
+
+If using a **brightness/lux sensor**, proper placement is critical:
+
+**✅ CORRECT placement:**
+- Sensor must have **unobstructed view of the sky**
+- Place on roof, balcony, or outdoor location with clear sky visibility
+- Avoid any shading from buildings, trees, or structures
+
+**❌ INCORRECT placement (will cause low estimates):**
+- ❌ Under solar panels
+- ❌ Under roof overhangs
+- ❌ In shaded locations
+- ❌ Indoor placement near windows
+
+**Why it matters:**
+- Incorrectly placed sensors read artificially low lux values (e.g., 751 lux instead of 28,800 lux)
+- This causes production estimates to be drastically reduced (by 90% or more)
+- SPVM will show WARNING in logs if lux readings seem suspiciously low
+
+**What to do if you can't place it properly:**
+1. **Remove lux sensor from SPVM configuration** - Let SPVM use cloud coverage instead
+2. **Increase `lux_floor_factor`** to 0.5-0.7 in configuration to compensate
+3. **Relocate the sensor** to a proper location with sky visibility
 
 ### 4. Solar Parameters
 Configure your solar installation:
@@ -160,9 +185,12 @@ Fine-tune SPVM predictions for your specific installation conditions:
 | `lux_min_elevation_deg` | Minimum sun elevation to use lux correction | 5° | 0-15° |
 | `lux_floor_factor` | Minimum correction floor (prevents zeroing) | 0.1 (10%) | 0.01-0.5 |
 
+**⚠️ IMPORTANT:** Before adjusting these parameters, ensure your lux sensor has proper [sky visibility](#️-lux-sensor-placement-requirements). Incorrectly placed sensors (under panels, in shade) will cause artificially low readings.
+
 **When to adjust:**
 - **Lux overestimates on thick clouds** → Lower `lux_floor_factor` to 0.02-0.05
 - **Lux readings erratic at low sun** → Increase `lux_min_elevation_deg` to 8-10°
+- **Lux sensor under panels or shaded** → Increase `lux_floor_factor` to 0.5-0.7 OR remove lux sensor from config
 
 #### Seasonal Shading (Trees, Buildings)
 | Parameter | Description | Default | Range |
@@ -482,4 +510,4 @@ MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Smart PV Meter v0.6.9** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)
+**Smart PV Meter v0.7.2** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)

@@ -1,5 +1,49 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.7.2 - Lux Sensor Placement Detection (December 2025)
+
+### Added
+- ⚠️ **Automatic lux sensor placement warning** - Detects when lux sensor may be incorrectly placed
+  - Triggers when lux readings are < 25% of theoretical clear-sky value
+  - Warns if sensor might be under panels, in shade, or obstructed
+  - Provides actionable solutions in log warnings
+  - Includes comparison: actual lux vs theoretical lux at current sun elevation
+- 📖 **Comprehensive lux sensor documentation** - Added placement requirements to README
+  - Clear guidance on correct vs incorrect placement
+  - Examples of common placement mistakes (under panels, under overhangs, etc.)
+  - Solutions for incorrectly placed sensors
+  - Cross-references in configuration parameter sections
+
+### Improved
+- 🎯 **Better diagnostic feedback** - Users now immediately see when low estimates are caused by sensor placement
+- 📝 **Enhanced README** - Lux sensor section now prominently warns about placement requirements
+- 🔍 **Proactive issue detection** - System alerts users to configuration issues before they need to debug
+
+### Technical Details
+- Coordinator: Added lux placement validation after diagnostic logging
+- Theoretical lux calculation: GHI × 120 (approximate W/m² to lux conversion)
+- Warning threshold: lux_factor < 0.25 AND lux_ratio < 0.25 AND sun elevation > 10°
+- README: Added dedicated "Lux Sensor Placement Requirements" section with visual indicators
+
+### Use Cases
+1. **Troubleshooting low estimates** - Log warnings immediately identify sensor placement issues
+2. **Initial setup** - Users know upfront how to place lux sensor correctly
+3. **Post-installation validation** - System validates sensor placement automatically during operation
+
+### Example Warning Log
+```
+⚠️  SPVM LUX SENSOR PLACEMENT WARNING:
+  Your lux sensor is reading 751 lux while theoretical clear-sky lux
+  should be ~28800 lux at 21.1° sun elevation.
+  This is only 2.6% of expected, causing production estimate
+  to be reduced to 10% of clear-sky value.
+  ⚡ COMMON CAUSE: Lux sensor placed under solar panels or in shaded location.
+  📍 SOLUTION: Either:
+     1. Remove lux sensor from SPVM configuration (use cloud% instead)
+     2. Relocate sensor to unobstructed sky view
+     3. Increase 'lux_floor_factor' to 0.5-0.7 in configuration
+```
+
 ## 📦 Version 0.7.1 - Robustness & Diagnostics (December 2025)
 
 ### Fixed

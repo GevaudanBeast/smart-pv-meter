@@ -236,6 +236,31 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             f"    - Yield ratio: {(pv_w/expected_w*100) if expected_w > 1e-6 else 0:.1f}%"
         )
 
+        # ⚠️ Detect suspiciously low lux readings that might indicate sensor placement issues
+        if (
+            model.lux_factor is not None
+            and lux is not None
+            and model.elevation_deg > 10.0
+            and model.lux_factor < 0.25
+        ):
+            # Estimate theoretical clear-sky lux for comparison
+            theoretical_lux = model.ghi_clear_wm2 * 120  # Rough conversion: 1 W/m² ≈ 120 lux
+            if theoretical_lux > 0:
+                lux_ratio = lux / theoretical_lux
+                if lux_ratio < 0.25:  # Less than 25% of theoretical
+                    _LOGGER.warning(
+                        f"⚠️  SPVM LUX SENSOR PLACEMENT WARNING:\n"
+                        f"  Your lux sensor is reading {lux:.0f} lux while theoretical clear-sky lux "
+                        f"should be ~{theoretical_lux:.0f} lux at {model.elevation_deg:.1f}° sun elevation.\n"
+                        f"  This is only {lux_ratio*100:.1f}% of expected, causing production estimate "
+                        f"to be reduced to {model.lux_factor*100:.0f}% of clear-sky value.\n"
+                        f"  ⚡ COMMON CAUSE: Lux sensor placed under solar panels or in shaded location.\n"
+                        f"  📍 SOLUTION: Either:\n"
+                        f"     1. Remove lux sensor from SPVM configuration (use cloud% instead)\n"
+                        f"     2. Relocate sensor to unobstructed sky view\n"
+                        f"     3. Increase 'lux_floor_factor' to 0.5-0.7 in configuration"
+                    )
+
         # KPIs
         yield_ratio_pct = (pv_w / expected_w) * 100.0 if expected_w > 1e-6 else None
 
