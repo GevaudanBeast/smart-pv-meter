@@ -1,5 +1,56 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.7.1 - Robustness & Diagnostics (December 2025)
+
+### Fixed
+- 🐛 **Config flow error 500 resolved** - Configuration editor now opens reliably
+  - Complete try/except protection in schema builder
+  - Fallback to minimal schema if errors occur
+  - Detailed error logging with stack traces for debugging
+- 🔧 **Sensor unavailability tolerance** - Integration no longer crashes when sensors temporarily unavailable
+  - Cache of last known PV value used when sensor becomes "unknown" or "unavailable"
+  - Detailed warning logs showing exact sensor state when issues occur
+  - Prevents "pv_sensor has no numeric state" errors during Home Assistant restarts
+
+### Added
+- 📊 **Comprehensive diagnostic logging** - Detailed production estimate breakdown
+  - All solar model parameters (panel_peak_w, efficiency, tilt, azimuth, location)
+  - Solar geometry (elevation, azimuth, incidence angles)
+  - Irradiance values (GHI, POA clear-sky)
+  - Step-by-step power calculation (clear-sky → corrections → degradation → cap)
+  - All correction factors (lux, cloud, temperature) with actual sensor values
+  - Current production vs expected with yield ratio
+- 🔍 **Enhanced error messages** - Config validation errors now show field-specific details
+
+### Improved
+- 🛡️ **Config flow resilience** - Robust error handling at all levels
+  - Schema construction protected with try/except
+  - Validation errors caught and logged
+  - User-friendly error messages with troubleshooting hints
+- 📝 **Better debugging** - All errors logged with `exc_info=True` for full stack traces
+- ⚡ **Startup reliability** - No longer fails if PV sensor not ready at startup
+
+### Technical Details
+- Coordinator: Added `_last_pv_w` cache for sensor fallback
+- Config flow: Full try/except wrapping of `_schema()` function with minimal fallback schema
+- New error message strings: "unknown", "schema_error" in translations
+- Diagnostic logs use INFO level for easy visibility in Home Assistant logs
+
+### Use Cases
+1. **Configuration issues** - Open logs after config flow errors to see exact cause
+2. **Low production estimates** - Check "SPVM DIAGNOSTIC" logs to identify misconfigured parameters
+3. **Sensor reliability** - System continues running even when PV sensor becomes temporarily unavailable
+4. **Home Assistant restarts** - Integration survives restarts even if Envoy integration loads later
+
+### Debugging Guide
+When facing issues:
+1. Check Home Assistant logs (Settings → System → Logs)
+2. Search for "SPVM DIAGNOSTIC" to see full production estimate breakdown
+3. Search for "SPVM _schema" or "SPVM config flow" to see configuration errors
+4. All errors include full stack traces for GitHub issue reports
+
+---
+
 ## 📦 Version 0.6.9 - Configurable Lux Correction & Seasonal Shading (November 2025)
 
 ### Added
