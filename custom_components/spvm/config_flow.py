@@ -264,9 +264,6 @@ class SPVMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
     """Options (édition) robustes sans defaults None et avec coercition."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input=None):
         _LOGGER.error("SPVM DEBUG: async_step_init called - START")
         try:
