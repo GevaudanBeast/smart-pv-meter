@@ -268,12 +268,16 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
+        _LOGGER.error("SPVM DEBUG: async_step_init called - START")
         try:
+            _LOGGER.error("SPVM DEBUG: Merging config data")
             data_cur = dict(self.config_entry.data or {})
             opts_cur = dict(self.config_entry.options or {})
             merged = {**data_cur, **opts_cur}
+            _LOGGER.error(f"SPVM DEBUG: Merged config keys: {list(merged.keys())}")
 
             if user_input is not None:
+                _LOGGER.error("SPVM DEBUG: Processing user input")
                 try:
                     errors = _validate_required(user_input)
                     if errors:
@@ -290,7 +294,10 @@ class SPVMOptionsFlowHandler(config_entries.OptionsFlow):
                         errors={"base": "unknown"}
                     )
 
-            return self.async_show_form(step_id="init", data_schema=_schema(self.hass, merged), errors={})
+            _LOGGER.error("SPVM DEBUG: Building schema for initial form display")
+            schema = _schema(self.hass, merged)
+            _LOGGER.error(f"SPVM DEBUG: Schema built successfully, showing form")
+            return self.async_show_form(step_id="init", data_schema=schema, errors={})
         except Exception as err:
             _LOGGER.error(f"SPVM config flow error during form display: {err}", exc_info=True)
             # Fallback: créer un schéma minimal avec seulement les champs requis
