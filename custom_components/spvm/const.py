@@ -1,4 +1,4 @@
-"""Constantes Smart PV Meter (SPVM) v0.6.2 + compat rétro."""
+"""Constantes Smart PV Meter (SPVM) v0.7.3 + compat rétro."""
 from __future__ import annotations
 from typing import Final
 
@@ -77,6 +77,8 @@ CONF_LUX_MIN_ELEVATION: Final = "lux_min_elevation_deg"    # Élévation min pou
 DEF_LUX_MIN_ELEVATION: Final = 5.0                          # 5° par défaut
 CONF_LUX_FLOOR_FACTOR: Final = "lux_floor_factor"          # Plancher minimum correction (0.01-0.5)
 DEF_LUX_FLOOR_FACTOR: Final = 0.1                           # 10% minimum par défaut
+CONF_LUX_MAX_CHANGE_PCT: Final = "lux_max_change_pct"      # Variation max tolérée entre 2 lectures (%)
+DEF_LUX_MAX_CHANGE_PCT: Final = 100.0                       # 100% = doublement/division par 2 max
 
 # Ombrage obstacles (arbres, bâtiments)
 CONF_SHADING_WINTER_PCT: Final = "shading_winter_pct"      # Ombrage supplémentaire hiver (%)
