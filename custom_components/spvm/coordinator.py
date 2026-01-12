@@ -29,6 +29,7 @@ from .const import (
     CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE, CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY,
     # lux correction & seasonal shading
     CONF_LUX_MIN_ELEVATION, DEF_LUX_MIN_ELEVATION, CONF_LUX_FLOOR_FACTOR, DEF_LUX_FLOOR_FACTOR,
+    CONF_LUX_MAX_CHANGE_PCT, DEF_LUX_MAX_CHANGE_PCT,
     CONF_SHADING_WINTER_PCT, DEF_SHADING_WINTER_PCT,
     CONF_SHADING_MONTH_START, DEF_SHADING_MONTH_START, CONF_SHADING_MONTH_END, DEF_SHADING_MONTH_END,
     # timing
@@ -68,6 +69,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         self.hass = hass
         self.entry = entry
         self._last_pv_w: Optional[float] = None  # Cache dernière valeur PV pour tolérance
+        self._last_lux: Optional[float] = None   # Cache dernière valeur lux pour filtre anti-reflet
 
         data = {**(entry.data or {}), **(entry.options or {})}
 
@@ -120,6 +122,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         # Lux correction parameters (v0.6.9+)
         self.lux_min_elevation: float = float(data.get(CONF_LUX_MIN_ELEVATION, DEF_LUX_MIN_ELEVATION))
         self.lux_floor_factor: float = float(data.get(CONF_LUX_FLOOR_FACTOR, DEF_LUX_FLOOR_FACTOR))
+        self.lux_max_change_pct: float = float(data.get(CONF_LUX_MAX_CHANGE_PCT, DEF_LUX_MAX_CHANGE_PCT))
 
         # Seasonal shading parameters (v0.6.9+)
         self.shading_winter_pct: float = float(data.get(CONF_SHADING_WINTER_PCT, DEF_SHADING_WINTER_PCT))
@@ -147,10 +150,28 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         house = _safe_float(house_state)
         grid = _safe_float(self.hass.states.get(self.grid_entity)) if self.grid_entity else None
         batt = _safe_float(self.hass.states.get(self.batt_entity)) if self.batt_entity else None
-        lux = _safe_float(self.hass.states.get(self.lux_entity)) if self.lux_entity else None
+        lux_raw = _safe_float(self.hass.states.get(self.lux_entity)) if self.lux_entity else None
         temp = _safe_float(self.hass.states.get(self.temp_entity)) if self.temp_entity else None
         hum = _safe_float(self.hass.states.get(self.hum_entity)) if self.hum_entity else None
         cloud = _safe_float(self.hass.states.get(self.cloud_entity)) if self.cloud_entity else None
+
+        # Filtre anti-reflet : ignorer les variations de lux trop brusques (ex: reflet métallique)
+        lux = lux_raw
+        lux_filtered = False
+        if lux_raw is not None and self._last_lux is not None and self._last_lux > 0:
+            change_pct = abs(lux_raw - self._last_lux) / self._last_lux * 100.0
+            if change_pct > self.lux_max_change_pct:
+                _LOGGER.warning(
+                    f"⚡ SPVM LUX SPIKE FILTERED: Variation de {change_pct:.0f}% détectée "
+                    f"({self._last_lux:.0f} → {lux_raw:.0f} lux). "
+                    f"Probable reflet (seuil: {self.lux_max_change_pct}%). "
+                    f"Valeur ignorée, utilisation de la correction cloud à la place."
+                )
+                lux = None  # Ignorer cette valeur, fallback sur cloud_pct
+                lux_filtered = True
+        # Mettre à jour le cache uniquement si valeur non filtrée
+        if lux_raw is not None and not lux_filtered:
+            self._last_lux = lux_raw
 
         # Log detailed sensor state for debugging
         if pv is None:
@@ -317,6 +338,10 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             attrs["battery_now"] = batt
         if lux is not None:
             attrs["lux_now"] = lux
+        if lux_raw is not None:
+            attrs["lux_raw"] = lux_raw
+        if lux_filtered:
+            attrs["lux_spike_filtered"] = True
         if temp is not None:
             attrs["temp_now"] = temp
         if hum is not None:

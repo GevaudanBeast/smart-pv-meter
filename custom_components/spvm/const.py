@@ -1,4 +1,4 @@
-"""Constantes Smart PV Meter (SPVM) v0.6.2 + compat rétro."""
+"""Constantes Smart PV Meter (SPVM) v0.7.3 + compat rétro."""
 from __future__ import annotations
 from typing import Final
 
@@ -47,7 +47,7 @@ CONF_RESERVE_W: Final = "reserve_w"
 DEF_RESERVE_W: Final = 150                              # Réserve Zendure
 
 CONF_CAP_MAX_W: Final = "cap_max_w"
-DEF_CAP_MAX_W: Final = 3000                             # Cap dur 3 kW
+DEF_CAP_MAX_W: Final = 2800                             # Limite onduleur/contrat
 
 CONF_DEGRADATION_PCT: Final = "degradation_pct"
 DEF_DEGRADATION_PCT: Final = 0.0
@@ -57,8 +57,8 @@ CONF_PANEL_PEAK_POWER: Final = "panel_peak_w"           # Wc
 CONF_PANEL_TILT: Final = "panel_tilt_deg"               # 0 (horizontal) .. 90 (vertical)
 CONF_PANEL_AZIMUTH: Final = "panel_azimuth_deg"         # 0=N, 90=E, 180=S, 270=O
 
-DEF_PANEL_PEAK_POWER: Final = 2800.0
-DEF_PANEL_TILT: Final = 30.0
+DEF_PANEL_PEAK_POWER: Final = 4700.0              # 6×450W + 4×500W
+DEF_PANEL_TILT: Final = 24.0                       # Moyenne pondérée (30° + pergola)
 DEF_PANEL_AZIMUTH: Final = 180.0
 
 CONF_SITE_LATITUDE: Final = "site_lat"
@@ -70,17 +70,19 @@ DEF_SITE_LONGITUDE: Final = None
 DEF_SITE_ALTITUDE: Final = None
 
 CONF_SYSTEM_EFFICIENCY: Final = "system_efficiency"     # 0.5 .. 1.0
-DEF_SYSTEM_EFFICIENCY: Final = 0.85
+DEF_SYSTEM_EFFICIENCY: Final = 0.80                      # Calibré sur données réelles
 
 # Correction Lux (v0.6.8+)
 CONF_LUX_MIN_ELEVATION: Final = "lux_min_elevation_deg"    # Élévation min pour activer correction lux
 DEF_LUX_MIN_ELEVATION: Final = 5.0                          # 5° par défaut
 CONF_LUX_FLOOR_FACTOR: Final = "lux_floor_factor"          # Plancher minimum correction (0.01-0.5)
-DEF_LUX_FLOOR_FACTOR: Final = 0.1                           # 10% minimum par défaut
+DEF_LUX_FLOOR_FACTOR: Final = 0.5                           # 50% (capteur sous panneaux)
+CONF_LUX_MAX_CHANGE_PCT: Final = "lux_max_change_pct"      # Variation max tolérée entre 2 lectures (%)
+DEF_LUX_MAX_CHANGE_PCT: Final = 100.0                       # 100% = doublement/division par 2 max
 
 # Ombrage obstacles (arbres, bâtiments)
 CONF_SHADING_WINTER_PCT: Final = "shading_winter_pct"      # Ombrage supplémentaire hiver (%)
-DEF_SHADING_WINTER_PCT: Final = 0.0                         # Pas d'ombrage par défaut
+DEF_SHADING_WINTER_PCT: Final = 26.0                        # Calibré sur données réelles
 CONF_SHADING_MONTH_START: Final = "shading_month_start"    # Mois début ombrage (1-12)
 DEF_SHADING_MONTH_START: Final = 11                         # Novembre par défaut
 CONF_SHADING_MONTH_END: Final = "shading_month_end"        # Mois fin ombrage (1-12)
