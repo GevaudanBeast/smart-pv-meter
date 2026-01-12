@@ -1,6 +1,6 @@
-# 🎛️ Paramètres de correction SPVM v0.6.9
+# 🎛️ Paramètres de correction SPVM v0.7.4
 
-Guide des nouveaux paramètres configurables pour affiner les prédictions selon votre installation.
+Guide des paramètres configurables pour affiner les prédictions selon votre installation.
 
 ---
 
@@ -52,6 +52,41 @@ Ratio = 254 / 12960 = 0.02 (2%)
 
 Avec floor 0.1 → SPVM applique 10% (conservateur)
 Avec floor 0.02 → SPVM applique 2% (précis)
+```
+
+---
+
+### `lux_max_change_pct` *(v0.7.3+)*
+**Filtre anti-reflet**
+
+- **Défaut :** `100` %
+- **Plage :** `20` à `500` %
+- **Description :** Variation maximale tolérée entre deux lectures lux consécutives. Au-delà, la valeur est considérée comme un reflet et ignorée.
+
+**Quand diminuer (ex: 50%) :**
+- Si des reflets rapides passent malgré le filtre
+- Si les conditions lumineuses sont stables
+
+**Quand augmenter (ex: 150%) :**
+- Si le capteur est dans une zone où la luminosité varie rapidement (nuages rapides)
+- Si trop de valeurs sont filtrées par erreur
+
+**Exemple :**
+```yaml
+lux_max_change_pct: 100  # Défaut : filtre les variations > 100%
+lux_max_change_pct: 50   # Plus strict : filtre les variations > 50%
+```
+
+**Cas d'usage :**
+- Tube inox ou surface métallique réfléchissante près du capteur
+- Fenêtre qui reflète le soleil à certaines heures
+- Véhicule garé qui crée des reflets temporaires
+
+**Attributs de diagnostic :**
+```yaml
+lux_raw: 6000            # Valeur brute du capteur
+lux_now: null            # Valeur filtrée (null si reflet détecté)
+lux_spike_filtered: true # Indique qu'un reflet a été filtré
 ```
 
 ---
@@ -266,5 +301,5 @@ Production finale = Production ciel clair
 
 ---
 
-**Document mis à jour :** 21 novembre 2025
-**Version SPVM :** 0.6.9+
+**Document mis à jour :** 12 janvier 2026
+**Version SPVM :** 0.7.4

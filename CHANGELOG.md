@@ -1,5 +1,51 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.7.4 - Calibrated Parameters (January 2026)
+
+### Changed
+- 🎯 **Default parameters calibrated from 6-month historical data**
+  - `panel_peak_w`: 2800 → **4700** (6×450W + 4×500W)
+  - `panel_tilt_deg`: 30 → **24** (weighted average 30° + pergola)
+  - `cap_max_w`: 3000 → **2800** (inverter/contract limit)
+  - `system_efficiency`: 0.85 → **0.80** (calibrated)
+  - `shading_winter_pct`: 0 → **26** (Nov-Feb shading detected)
+  - `lux_floor_factor`: 0.1 → **0.5** (sensor under panels)
+
+### Note
+These defaults are calibrated for a specific installation. Users should adjust parameters to match their own setup via Home Assistant configuration.
+
+---
+
+## 📦 Version 0.7.3 - Lux Spike Filter (January 2026)
+
+### Added
+- ⚡ **Lux spike filter** - Rejects sudden lux variations caused by reflections
+  - New parameter `lux_max_change_pct` (default: 100%)
+  - Detects when lux changes > threshold between readings
+  - Falls back to cloud% correction when spike detected
+  - Logs warning with details when filtering occurs
+- 🔍 **New diagnostic attributes**
+  - `lux_raw`: Raw lux value from sensor (even when filtered)
+  - `lux_spike_filtered`: `true` when a reflection spike was detected
+
+### Use Case
+Metallic surfaces (stainless steel tubes, window frames) can reflect sunlight onto the lux sensor, causing unrealistic spikes. This filter detects and ignores these readings.
+
+### Example Log
+```
+⚡ SPVM LUX SPIKE FILTERED: Variation de 300% détectée (1500 → 6000 lux).
+   Probable reflet (seuil: 100%). Valeur ignorée, utilisation de la correction cloud.
+```
+
+### Configuration
+```yaml
+lux_max_change_pct: 100   # Max 100% change between readings (default)
+lux_max_change_pct: 150   # More tolerant (allows 150% changes)
+lux_max_change_pct: 50    # Stricter (filters smaller variations)
+```
+
+---
+
 ## 📦 Version 0.7.2 - Lux Sensor Placement Detection (December 2025)
 
 ### Added
