@@ -13,6 +13,10 @@
   - `open_meteo_enabled`: Whether Open-Meteo is configured
   - `open_meteo_ghi_wm2`: Real GHI from Open-Meteo
   - `open_meteo_gti_wm2`: Real GTI (POA) from Open-Meteo
+- 🔍 **Lux sensor as trend validator** - Cross-validates Open-Meteo with local lux
+  - `lux_validation`: "consistent", "lux_high", or "lux_low"
+  - `lux_ghi_ratio`: Ratio of actual lux vs expected from GHI
+  - Detects if Open-Meteo data differs from local conditions
 - 🌡️ **Weather data fallback** - Uses Open-Meteo cloud/temp if local sensors unavailable
 
 ### Benefits

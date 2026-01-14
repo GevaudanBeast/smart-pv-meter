@@ -250,6 +250,25 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             except Exception as e:
                 _LOGGER.warning(f"Open-Meteo fetch failed, using clear-sky model: {e}")
 
+        # ---- Lux as trend validator (v0.7.5+) ----
+        # Compare lux trend with Open-Meteo to detect discrepancies
+        lux_validation: Optional[str] = None
+        lux_ghi_ratio: Optional[float] = None
+        if real_ghi is not None and real_ghi > 50 and lux is not None and lux > 100:
+            # Theoretical: ~120 lux per W/m² GHI at ground level
+            expected_lux = real_ghi * 120.0
+            lux_ghi_ratio = lux / expected_lux
+
+            if lux_ghi_ratio > 1.5:
+                lux_validation = "lux_high"  # Lux higher than expected (direct sun reflection?)
+                _LOGGER.debug(f"Lux validation: HIGH - lux={lux:.0f} vs expected={expected_lux:.0f} (ratio={lux_ghi_ratio:.2f})")
+            elif lux_ghi_ratio < 0.3:
+                lux_validation = "lux_low"   # Lux lower than expected (sensor in shade)
+                _LOGGER.debug(f"Lux validation: LOW - lux={lux:.0f} vs expected={expected_lux:.0f} (ratio={lux_ghi_ratio:.2f})")
+            else:
+                lux_validation = "consistent"  # Lux consistent with Open-Meteo
+                _LOGGER.debug(f"Lux validation: OK - lux={lux:.0f} vs expected={expected_lux:.0f} (ratio={lux_ghi_ratio:.2f})")
+
         # ---- Physical solar model ----
         now_utc = datetime.now(timezone.utc)
         inputs = SolarInputs(
@@ -420,6 +439,10 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         if model.using_real_irradiance:
             attrs["open_meteo_ghi_wm2"] = round(model.real_ghi_wm2, 1) if model.real_ghi_wm2 else None
             attrs["open_meteo_gti_wm2"] = round(model.real_gti_wm2, 1) if model.real_gti_wm2 else None
+        # Lux validation (v0.7.5+)
+        if lux_validation is not None:
+            attrs["lux_validation"] = lux_validation
+            attrs["lux_ghi_ratio"] = round(lux_ghi_ratio, 2) if lux_ghi_ratio else None
         if model.lux_factor is not None:
             attrs["lux_factor"] = round(model.lux_factor, 3)
             attrs["lux_correction_active"] = True
