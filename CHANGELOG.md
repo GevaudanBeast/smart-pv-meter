@@ -1,18 +1,104 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
-## 📦 Version 0.7.4 - Calibrated Parameters (January 2026)
+## 📦 Version 0.7.6 - Code Cleanup & Maintenance (January 2026)
 
-### Changed
-- 🎯 **Default parameters calibrated from 6-month historical data**
-  - `panel_peak_w`: 2800 → **4700** (6×450W + 4×500W)
-  - `panel_tilt_deg`: 30 → **24** (weighted average 30° + pergola)
-  - `cap_max_w`: 3000 → **2800** (inverter/contract limit)
-  - `system_efficiency`: 0.85 → **0.80** (calibrated)
-  - `shading_winter_pct`: 0 → **26** (Nov-Feb shading detected)
-  - `lux_floor_factor`: 0.1 → **0.5** (sensor under panels)
+### Removed
+- 🗑️ **Obsolete files removed** - Cleaned up legacy code from k-NN era
+  - `helpers.py` - Dead code (unused k-NN distance functions)
+  - `services.yaml` - Referenced obsolete k-NN services
+  - `tests/` directory - Empty/unused test structure
+  - Various user-specific diagnostic MD files
 
-### Note
-These defaults are calibrated for a specific installation. Users should adjust parameters to match their own setup via Home Assistant configuration.
+### Improved
+- 🔧 **diagnostics.py** - Cleaned up, removed k-NN references, modern data structure
+- 📝 **diagnostic.py** - Rewritten as standalone test script with multi-array support
+- 📖 **README.md** - Updated with latest features (Open-Meteo, Multi-Array, Lux validation)
+
+### Technical Details
+- Removed ~300 lines of dead code
+- Codebase is now cleaner and more maintainable
+- No functional changes - same features as v0.7.5
+
+---
+
+## 📦 Version 0.7.5 - Open-Meteo Real Irradiance (January 2026)
+
+### Added
+- 🌍 **Open-Meteo API integration** - Real solar irradiance data instead of theoretical clear-sky model
+  - Fetches actual GHI (Global Horizontal Irradiance) from Open-Meteo
+  - Uses GTI (Global Tilted Irradiance) for accurate POA calculation
+  - Automatic fallback to clear-sky model if API unavailable
+  - 5-minute cache to avoid API rate limits
+- 📊 **New diagnostic attributes**:
+  - `irradiance_source`: "open_meteo" or "clear_sky_model"
+  - `open_meteo_enabled`: Whether Open-Meteo is configured
+  - `open_meteo_ghi_wm2`: Real GHI from Open-Meteo
+  - `open_meteo_gti_wm2`: Real GTI (POA) from Open-Meteo
+- 🔍 **Lux sensor as trend validator** - Cross-validates Open-Meteo with local lux
+  - `lux_validation`: "consistent", "lux_high", or "lux_low"
+  - `lux_ghi_ratio`: Ratio of actual lux vs expected from GHI
+  - Detects if Open-Meteo data differs from local conditions
+- 🌡️ **Weather data fallback** - Uses Open-Meteo cloud/temp if local sensors unavailable
+
+### Benefits
+- **More accurate predictions** - Real weather data vs theoretical clear-sky
+- **No calibration needed** - Works out of the box for any location
+- **Universal** - Same accuracy regardless of local sensors
+- **Future-ready** - Foundation for forecast features (J+1, J+7)
+
+### Configuration
+Open-Meteo is **enabled by default**. To disable:
+```yaml
+use_open_meteo: false  # Reverts to clear-sky model
+```
+
+### Technical Details
+- API endpoint: `https://api.open-meteo.com/v1/forecast`
+- Parameters: `shortwave_radiation`, `global_tilted_irradiance`, `cloud_cover`, `temperature_2m`
+- GTI uses panel tilt/azimuth for accurate POA calculation
+- When real irradiance is available, cloud/lux corrections are skipped (already in data)
+- Only temperature and seasonal shading corrections are applied
+
+---
+
+## 📦 Version 0.7.4 - Multi-Array Support (January 2026)
+
+### Added
+- 🆕 **Multi-array support** - Model installations with multiple panel orientations
+  - `array2_peak_w`: Peak power of second array (W), 0 = disabled
+  - `array2_tilt_deg`: Tilt angle of second array (default: 15°)
+  - `array2_azimuth_deg`: Azimuth of second array (default: 180° South)
+- 📊 **New diagnostic attributes** for array 2:
+  - `array2_incidence_deg`: Incidence angle on array 2
+  - `array2_poa_clear_wm2`: POA irradiance on array 2
+  - `array2_expected_clear_w`: Clear-sky power for array 2
+  - `array2_expected_corrected_w`: Corrected power for array 2
+- 📝 **Enhanced logging** - Separate breakdown for each array
+
+### Use Cases
+- **Mixed roof orientations** - Main array on south-facing roof + second array on east/west
+- **Pergola installations** - Main panels at 30° + pergola panels at 15°
+- **Ground + roof systems** - Different tilts and orientations
+- **Split installations** - Any two-group configuration with different geometries
+
+### Configuration Example
+```yaml
+# Main array (e.g., 6 panels × 450W at 30° tilt)
+panel_peak_w: 2700
+panel_tilt_deg: 30
+panel_azimuth_deg: 180
+
+# Second array (e.g., 4 panels × 500W on pergola at 15°)
+array2_peak_w: 2000
+array2_tilt_deg: 15
+array2_azimuth_deg: 180
+```
+
+### Technical Details
+- Each array calculates its own incidence angle and POA irradiance
+- Same weather corrections (cloud, lux, temperature, shading) apply to both arrays
+- Results are summed for total expected production
+- `cap_max_w` applies to the combined total (for inverter/contract limits)
 
 ---
 

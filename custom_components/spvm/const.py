@@ -1,4 +1,4 @@
-"""Constantes Smart PV Meter (SPVM) v0.7.3 + compat rétro."""
+"""Constantes Smart PV Meter (SPVM) v0.7.6 + compat rétro."""
 from __future__ import annotations
 from typing import Final
 
@@ -47,7 +47,7 @@ CONF_RESERVE_W: Final = "reserve_w"
 DEF_RESERVE_W: Final = 150                              # Réserve Zendure
 
 CONF_CAP_MAX_W: Final = "cap_max_w"
-DEF_CAP_MAX_W: Final = 2800                             # Limite onduleur/contrat
+DEF_CAP_MAX_W: Final = 3000                             # Limite onduleur/contrat
 
 CONF_DEGRADATION_PCT: Final = "degradation_pct"
 DEF_DEGRADATION_PCT: Final = 0.0
@@ -57,9 +57,18 @@ CONF_PANEL_PEAK_POWER: Final = "panel_peak_w"           # Wc
 CONF_PANEL_TILT: Final = "panel_tilt_deg"               # 0 (horizontal) .. 90 (vertical)
 CONF_PANEL_AZIMUTH: Final = "panel_azimuth_deg"         # 0=N, 90=E, 180=S, 270=O
 
-DEF_PANEL_PEAK_POWER: Final = 4700.0              # 6×450W + 4×500W
-DEF_PANEL_TILT: Final = 24.0                       # Moyenne pondérée (30° + pergola)
+DEF_PANEL_PEAK_POWER: Final = 3000.0               # Wc (ajuster selon installation)
+DEF_PANEL_TILT: Final = 30.0                        # Inclinaison typique Europe
 DEF_PANEL_AZIMUTH: Final = 180.0
+
+# Second array (optionnel) pour installations multi-orientation (v0.7.4+)
+CONF_ARRAY2_PEAK_POWER: Final = "array2_peak_w"    # Wc du 2ème groupe (0 = désactivé)
+CONF_ARRAY2_TILT: Final = "array2_tilt_deg"        # Inclinaison 2ème groupe
+CONF_ARRAY2_AZIMUTH: Final = "array2_azimuth_deg"  # Azimuth 2ème groupe
+
+DEF_ARRAY2_PEAK_POWER: Final = 0.0                  # Désactivé par défaut
+DEF_ARRAY2_TILT: Final = 15.0                       # Pergola/toit plat typique
+DEF_ARRAY2_AZIMUTH: Final = 180.0                   # Sud par défaut
 
 CONF_SITE_LATITUDE: Final = "site_lat"
 CONF_SITE_LONGITUDE: Final = "site_lon"
@@ -70,23 +79,27 @@ DEF_SITE_LONGITUDE: Final = None
 DEF_SITE_ALTITUDE: Final = None
 
 CONF_SYSTEM_EFFICIENCY: Final = "system_efficiency"     # 0.5 .. 1.0
-DEF_SYSTEM_EFFICIENCY: Final = 0.80                      # Calibré sur données réelles
+DEF_SYSTEM_EFFICIENCY: Final = 0.85                      # Efficacité typique (onduleur + câbles)
 
 # Correction Lux (v0.6.8+)
 CONF_LUX_MIN_ELEVATION: Final = "lux_min_elevation_deg"    # Élévation min pour activer correction lux
 DEF_LUX_MIN_ELEVATION: Final = 5.0                          # 5° par défaut
 CONF_LUX_FLOOR_FACTOR: Final = "lux_floor_factor"          # Plancher minimum correction (0.01-0.5)
-DEF_LUX_FLOOR_FACTOR: Final = 0.5                           # 50% (capteur sous panneaux)
+DEF_LUX_FLOOR_FACTOR: Final = 0.1                           # 10% minimum par défaut
 CONF_LUX_MAX_CHANGE_PCT: Final = "lux_max_change_pct"      # Variation max tolérée entre 2 lectures (%)
 DEF_LUX_MAX_CHANGE_PCT: Final = 100.0                       # 100% = doublement/division par 2 max
 
 # Ombrage obstacles (arbres, bâtiments)
 CONF_SHADING_WINTER_PCT: Final = "shading_winter_pct"      # Ombrage supplémentaire hiver (%)
-DEF_SHADING_WINTER_PCT: Final = 26.0                        # Calibré sur données réelles
+DEF_SHADING_WINTER_PCT: Final = 0.0                         # Pas d'ombrage par défaut
 CONF_SHADING_MONTH_START: Final = "shading_month_start"    # Mois début ombrage (1-12)
 DEF_SHADING_MONTH_START: Final = 11                         # Novembre par défaut
 CONF_SHADING_MONTH_END: Final = "shading_month_end"        # Mois fin ombrage (1-12)
 DEF_SHADING_MONTH_END: Final = 2                            # Février par défaut
+
+# Open-Meteo API (v0.7.5+) - Irradiance réelle au lieu de modèle clear-sky
+CONF_USE_OPEN_METEO: Final = "use_open_meteo"              # Activer Open-Meteo API
+DEF_USE_OPEN_METEO: Final = True                            # Activé par défaut
 
 # Intervalle / lissage / debug
 CONF_UPDATE_INTERVAL_SECONDS: Final = "update_interval_seconds"

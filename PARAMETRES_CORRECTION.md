@@ -1,6 +1,48 @@
-# 🎛️ Paramètres de correction SPVM v0.7.4
+# 🎛️ Paramètres de correction SPVM v0.7.5
 
 Guide des paramètres configurables pour affiner les prédictions selon votre installation.
+
+---
+
+## 🌍 Open-Meteo API (irradiance réelle) *(v0.7.5+)*
+
+### `use_open_meteo`
+**Activer l'API Open-Meteo pour l'irradiance réelle**
+
+- **Défaut :** `true` (activé)
+- **Type :** booléen
+- **Description :** Utilise les données d'irradiance réelles d'Open-Meteo au lieu du modèle clear-sky théorique.
+
+**Avantages Open-Meteo :**
+- Données météo réelles (GHI, GTI, nuages, température)
+- Pas besoin de calibration locale
+- Précision uniforme partout dans le monde
+- Base pour prévisions futures (J+1, J+7)
+
+**Quand désactiver :**
+- Pas de connexion internet stable
+- Préférence pour le modèle local
+- Tests de comparaison
+
+**Configuration :**
+```yaml
+use_open_meteo: true   # Utilise Open-Meteo (défaut)
+use_open_meteo: false  # Revient au modèle clear-sky
+```
+
+**Fonctionnement :**
+1. SPVM appelle Open-Meteo toutes les 5 minutes (cache)
+2. Récupère GHI et GTI (irradiance sur panneau incliné)
+3. Applique uniquement les corrections température + ombrage
+4. Si API indisponible → fallback automatique sur clear-sky
+
+**Attributs de diagnostic :**
+```yaml
+irradiance_source: "open_meteo"    # ou "clear_sky_model"
+open_meteo_enabled: true
+open_meteo_ghi_wm2: 450.0          # GHI réel
+open_meteo_gti_wm2: 520.0          # POA réel (incliné)
+```
 
 ---
 
@@ -88,6 +130,75 @@ lux_raw: 6000            # Valeur brute du capteur
 lux_now: null            # Valeur filtrée (null si reflet détecté)
 lux_spike_filtered: true # Indique qu'un reflet a été filtré
 ```
+
+---
+
+## 🏠 Multi-Array (orientations multiples) *(v0.7.4+)*
+
+### `array2_peak_w`
+**Puissance crête du 2ème groupe de panneaux**
+
+- **Défaut :** `0` W (désactivé)
+- **Plage :** `0` à `20000` W
+- **Description :** Puissance totale du 2ème groupe de panneaux. Si `0`, le multi-array est désactivé.
+
+**Quand utiliser :**
+- Installation avec panneaux sur deux toits différents
+- Panneaux sur toit + pergola
+- Mix de panneaux avec inclinaisons différentes
+
+---
+
+### `array2_tilt_deg`
+**Inclinaison du 2ème groupe**
+
+- **Défaut :** `15` degrés
+- **Plage :** `0` à `90` degrés
+- **Description :** Angle d'inclinaison du 2ème groupe par rapport à l'horizontale.
+
+**Exemples :**
+- Pergola : `10-15°`
+- Toit plat : `5-10°`
+- Toit pentu : `30-45°`
+
+---
+
+### `array2_azimuth_deg`
+**Orientation du 2ème groupe**
+
+- **Défaut :** `180` degrés (Sud)
+- **Plage :** `0` à `360` degrés
+- **Description :** Direction vers laquelle pointe le 2ème groupe. 0=Nord, 90=Est, 180=Sud, 270=Ouest.
+
+---
+
+### Exemple de configuration multi-array
+
+**Installation typique :**
+- 6 panneaux × 450W sur toit à 30°, plein sud
+- 4 panneaux × 500W sur pergola à 15°, plein sud
+
+```yaml
+# Groupe principal (toit)
+panel_peak_w: 2700         # 6 × 450W
+panel_tilt_deg: 30
+panel_azimuth_deg: 180
+
+# Groupe secondaire (pergola)
+array2_peak_w: 2000        # 4 × 500W
+array2_tilt_deg: 15
+array2_azimuth_deg: 180
+
+# Limite onduleur/contrat
+cap_max_w: 2800            # Limite de puissance injectée
+```
+
+**Fonctionnement :**
+1. SPVM calcule l'irradiance POA séparément pour chaque groupe
+2. Chaque groupe a son propre angle d'incidence
+3. Les corrections météo s'appliquent aux deux groupes
+4. Les productions sont additionnées
+5. La limite `cap_max_w` s'applique au total
 
 ---
 
@@ -301,5 +412,5 @@ Production finale = Production ciel clair
 
 ---
 
-**Document mis à jour :** 12 janvier 2026
-**Version SPVM :** 0.7.4
+**Document mis à jour :** 14 janvier 2026
+**Version SPVM :** 0.7.5
