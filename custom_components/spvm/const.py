@@ -1,4 +1,4 @@
-"""Constantes Smart PV Meter (SPVM) v0.7.5 + compat rétro."""
+"""Constantes Smart PV Meter (SPVM) v0.7.6 + compat rétro."""
 from __future__ import annotations
 from typing import Final
 

@@ -1,5 +1,26 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.7.6 - Code Cleanup & Maintenance (January 2026)
+
+### Removed
+- 🗑️ **Obsolete files removed** - Cleaned up legacy code from k-NN era
+  - `helpers.py` - Dead code (unused k-NN distance functions)
+  - `services.yaml` - Referenced obsolete k-NN services
+  - `tests/` directory - Empty/unused test structure
+  - Various user-specific diagnostic MD files
+
+### Improved
+- 🔧 **diagnostics.py** - Cleaned up, removed k-NN references, modern data structure
+- 📝 **diagnostic.py** - Rewritten as standalone test script with multi-array support
+- 📖 **README.md** - Updated with latest features (Open-Meteo, Multi-Array, Lux validation)
+
+### Technical Details
+- Removed ~300 lines of dead code
+- Codebase is now cleaner and more maintainable
+- No functional changes - same features as v0.7.5
+
+---
+
 ## 📦 Version 0.7.5 - Open-Meteo Real Irradiance (January 2026)
 
 ### Added

@@ -1,20 +1,30 @@
-# 🎯 Smart PV Meter (SPVM) v0.7.2
+# 🎯 Smart PV Meter (SPVM) v0.7.6
 
-[![Version](https://img.shields.io/badge/version-0.7.2-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Version](https://img.shields.io/badge/version-0.7.6-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Smart PV Meter** is a Home Assistant integration that calculates expected solar production using a physical solar model based on astronomical calculations. It provides accurate predictions and surplus calculations for solar optimizers.
+**Smart PV Meter** is a Home Assistant integration that calculates expected solar production using real irradiance data from Open-Meteo API or a physical solar model. It provides accurate predictions and surplus calculations for solar optimizers.
 
 ---
 
 ## ✨ Features
 
+### 🌍 Open-Meteo Integration (v0.7.5+)
+- **Real irradiance data** from Open-Meteo API (GHI, GTI)
+- **Automatic weather data** (cloud coverage, temperature)
+- **No calibration needed** - works out of the box for any location
+- **Fallback to clear-sky model** if API unavailable
+
+### 🏠 Multi-Array Support (v0.7.4+)
+- **Two panel groups** with different orientations/tilts
+- Separate POA calculation for each array
+- Perfect for mixed roof + pergola installations
+
 ### 🌞 Physical Solar Model
 - **NOAA-style sun position** calculations (elevation, azimuth, declination)
-- **Clear-sky irradiance** modeling with atmospheric transmittance
 - **Plane-of-array (POA)** projection using incidence angle
-- **Weather adjustments** (cloud coverage, temperature derating)
+- **Weather adjustments** (temperature derating, seasonal shading)
 - **No external dependencies** - pure Python implementation
 
 ### 📊 Sensors
@@ -451,35 +461,25 @@ The yield ratio shows performance:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
-### Version 0.6.9 (Current - November 2025)
-- 🎛️ **Configurable lux correction** - Fine-tune `lux_min_elevation_deg` and `lux_floor_factor`
-- 🌲 **Seasonal shading support** - Compensate for trees/buildings blocking sun
-- 📖 **Complete user guide** - [PARAMETRES_CORRECTION.md](PARAMETRES_CORRECTION.md) with calibration examples
-- 🎯 Better accuracy at low sun angles and very cloudy conditions
+### Version 0.7.6 (Current - January 2026)
+- 🧹 **Code cleanup** - Removed obsolete files and k-NN legacy code
+- 📝 **Updated documentation** - Simplified and modernized
 
-### Version 0.6.8 (November 2025)
-- 🆕 **Lux-based correction** - More accurate predictions in cloudy conditions
-- ✨ Uses real lux sensor to detect thick clouds vs thin clouds
-- 📊 New attributes: `lux_factor`, `lux_correction_active`
-- 🎯 Fixes overestimation when cloud_pct underestimates actual conditions
+### Version 0.7.5 (January 2026)
+- 🌍 **Open-Meteo API** - Real irradiance data (GHI, GTI)
+- 🔍 **Lux validation** - Cross-validates Open-Meteo with local lux sensor
+- 🌡️ **Weather fallback** - Uses Open-Meteo cloud/temp if local sensors unavailable
 
-### Version 0.6.7 (November 2025)
-- 🐛 **CRITICAL FIX:** ZIP extraction path - files now extracted to correct location
-- 🐛 Fixed double nesting issue in Home Assistant installation
+### Version 0.7.4 (January 2026)
+- 🏠 **Multi-array support** - Two panel groups with different orientations
+- 📊 Separate POA calculation for each array
 
-### Version 0.6.3 (November 2025)
-- 🐛 **CRITICAL FIX:** Solar position calculation bug
-- 🐛 Fixed 400 Bad Request in config flow
-- 🐛 Fixed 500 Internal Server Error
-- 🐛 Fixed diagnostics coordinator access
-- 🏷️ Shorter entity names (English)
-- 📖 Added diagnostic guide
+### Version 0.7.3 (January 2026)
+- ⚡ **Lux spike filter** - Rejects sudden lux variations from reflections
 
-### Version 0.6.0 (November 2025)
-- 🆕 Physical solar model (NOAA calculations)
-- ⚡ 10x faster than k-NN model
-- 💾 95% less memory usage
-- 🎯 No historical data required
+### Version 0.6.9+ (November 2025)
+- 🎛️ Configurable lux correction and seasonal shading
+- 📖 Complete user guide in [PARAMETRES_CORRECTION.md](PARAMETRES_CORRECTION.md)
 
 ---
 
