@@ -91,6 +91,75 @@ lux_spike_filtered: true # Indique qu'un reflet a été filtré
 
 ---
 
+## 🏠 Multi-Array (orientations multiples) *(v0.7.4+)*
+
+### `array2_peak_w`
+**Puissance crête du 2ème groupe de panneaux**
+
+- **Défaut :** `0` W (désactivé)
+- **Plage :** `0` à `20000` W
+- **Description :** Puissance totale du 2ème groupe de panneaux. Si `0`, le multi-array est désactivé.
+
+**Quand utiliser :**
+- Installation avec panneaux sur deux toits différents
+- Panneaux sur toit + pergola
+- Mix de panneaux avec inclinaisons différentes
+
+---
+
+### `array2_tilt_deg`
+**Inclinaison du 2ème groupe**
+
+- **Défaut :** `15` degrés
+- **Plage :** `0` à `90` degrés
+- **Description :** Angle d'inclinaison du 2ème groupe par rapport à l'horizontale.
+
+**Exemples :**
+- Pergola : `10-15°`
+- Toit plat : `5-10°`
+- Toit pentu : `30-45°`
+
+---
+
+### `array2_azimuth_deg`
+**Orientation du 2ème groupe**
+
+- **Défaut :** `180` degrés (Sud)
+- **Plage :** `0` à `360` degrés
+- **Description :** Direction vers laquelle pointe le 2ème groupe. 0=Nord, 90=Est, 180=Sud, 270=Ouest.
+
+---
+
+### Exemple de configuration multi-array
+
+**Installation typique :**
+- 6 panneaux × 450W sur toit à 30°, plein sud
+- 4 panneaux × 500W sur pergola à 15°, plein sud
+
+```yaml
+# Groupe principal (toit)
+panel_peak_w: 2700         # 6 × 450W
+panel_tilt_deg: 30
+panel_azimuth_deg: 180
+
+# Groupe secondaire (pergola)
+array2_peak_w: 2000        # 4 × 500W
+array2_tilt_deg: 15
+array2_azimuth_deg: 180
+
+# Limite onduleur/contrat
+cap_max_w: 2800            # Limite de puissance injectée
+```
+
+**Fonctionnement :**
+1. SPVM calcule l'irradiance POA séparément pour chaque groupe
+2. Chaque groupe a son propre angle d'incidence
+3. Les corrections météo s'appliquent aux deux groupes
+4. Les productions sont additionnées
+5. La limite `cap_max_w` s'applique au total
+
+---
+
 ## 🌲 Ombrage saisonnier (arbres, bâtiments)
 
 ### `shading_winter_pct`
@@ -301,5 +370,5 @@ Production finale = Production ciel clair
 
 ---
 
-**Document mis à jour :** 12 janvier 2026
+**Document mis à jour :** 14 janvier 2026
 **Version SPVM :** 0.7.4

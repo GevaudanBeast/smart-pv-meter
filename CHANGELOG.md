@@ -1,18 +1,43 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
-## 📦 Version 0.7.4 - Calibrated Parameters (January 2026)
+## 📦 Version 0.7.4 - Multi-Array Support (January 2026)
 
-### Changed
-- 🎯 **Default parameters calibrated from 6-month historical data**
-  - `panel_peak_w`: 2800 → **4700** (6×450W + 4×500W)
-  - `panel_tilt_deg`: 30 → **24** (weighted average 30° + pergola)
-  - `cap_max_w`: 3000 → **2800** (inverter/contract limit)
-  - `system_efficiency`: 0.85 → **0.80** (calibrated)
-  - `shading_winter_pct`: 0 → **26** (Nov-Feb shading detected)
-  - `lux_floor_factor`: 0.1 → **0.5** (sensor under panels)
+### Added
+- 🆕 **Multi-array support** - Model installations with multiple panel orientations
+  - `array2_peak_w`: Peak power of second array (W), 0 = disabled
+  - `array2_tilt_deg`: Tilt angle of second array (default: 15°)
+  - `array2_azimuth_deg`: Azimuth of second array (default: 180° South)
+- 📊 **New diagnostic attributes** for array 2:
+  - `array2_incidence_deg`: Incidence angle on array 2
+  - `array2_poa_clear_wm2`: POA irradiance on array 2
+  - `array2_expected_clear_w`: Clear-sky power for array 2
+  - `array2_expected_corrected_w`: Corrected power for array 2
+- 📝 **Enhanced logging** - Separate breakdown for each array
 
-### Note
-These defaults are calibrated for a specific installation. Users should adjust parameters to match their own setup via Home Assistant configuration.
+### Use Cases
+- **Mixed roof orientations** - Main array on south-facing roof + second array on east/west
+- **Pergola installations** - Main panels at 30° + pergola panels at 15°
+- **Ground + roof systems** - Different tilts and orientations
+- **Split installations** - Any two-group configuration with different geometries
+
+### Configuration Example
+```yaml
+# Main array (e.g., 6 panels × 450W at 30° tilt)
+panel_peak_w: 2700
+panel_tilt_deg: 30
+panel_azimuth_deg: 180
+
+# Second array (e.g., 4 panels × 500W on pergola at 15°)
+array2_peak_w: 2000
+array2_tilt_deg: 15
+array2_azimuth_deg: 180
+```
+
+### Technical Details
+- Each array calculates its own incidence angle and POA irradiance
+- Same weather corrections (cloud, lux, temperature, shading) apply to both arrays
+- Results are summed for total expected production
+- `cap_max_w` applies to the combined total (for inverter/contract limits)
 
 ---
 

@@ -27,6 +27,10 @@ from .const import (
     CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH,
     CONF_SITE_LATITUDE, DEF_SITE_LATITUDE, CONF_SITE_LONGITUDE, DEF_SITE_LONGITUDE,
     CONF_SITE_ALTITUDE, DEF_SITE_ALTITUDE, CONF_SYSTEM_EFFICIENCY, DEF_SYSTEM_EFFICIENCY,
+    # second array (multi-orientation support)
+    CONF_ARRAY2_PEAK_POWER, DEF_ARRAY2_PEAK_POWER,
+    CONF_ARRAY2_TILT, DEF_ARRAY2_TILT,
+    CONF_ARRAY2_AZIMUTH, DEF_ARRAY2_AZIMUTH,
     # lux correction & seasonal shading
     CONF_LUX_MIN_ELEVATION, DEF_LUX_MIN_ELEVATION, CONF_LUX_FLOOR_FACTOR, DEF_LUX_FLOOR_FACTOR,
     CONF_LUX_MAX_CHANGE_PCT, DEF_LUX_MAX_CHANGE_PCT,
@@ -104,6 +108,11 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         self.panel_peak_w: float = float(data.get(CONF_PANEL_PEAK_POWER, DEF_PANEL_PEAK_POWER))
         self.panel_tilt_deg: float = float(data.get(CONF_PANEL_TILT, DEF_PANEL_TILT))
         self.panel_az_deg: float = float(data.get(CONF_PANEL_AZIMUTH, DEF_PANEL_AZIMUTH))
+
+        # Second array (multi-orientation installations, v0.7.4+)
+        self.array2_peak_w: float = float(data.get(CONF_ARRAY2_PEAK_POWER, DEF_ARRAY2_PEAK_POWER))
+        self.array2_tilt_deg: float = float(data.get(CONF_ARRAY2_TILT, DEF_ARRAY2_TILT))
+        self.array2_az_deg: float = float(data.get(CONF_ARRAY2_AZIMUTH, DEF_ARRAY2_AZIMUTH))
 
         self.site_lat: float = float(
             data.get(CONF_SITE_LATITUDE, self.hass.config.latitude if self.hass.config.latitude is not None else 0.0)
@@ -218,6 +227,10 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             shading_winter_pct=self.shading_winter_pct,
             shading_month_start=self.shading_month_start,
             shading_month_end=self.shading_month_end,
+            # Second array (multi-orientation, v0.7.4+)
+            array2_peak_w=self.array2_peak_w,
+            array2_tilt_deg=self.array2_tilt_deg,
+            array2_azimuth_deg=self.array2_az_deg,
         )
         model = solar_compute(inputs)
 
@@ -226,6 +239,17 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         expected_w = min(expected_w, float(self.cap_max_w))
 
         # Logs de diagnostic détaillés pour comprendre les estimations faibles
+        array2_info = ""
+        if self.array2_peak_w > 0:
+            array2_info = (
+                f"  Array 2 (multi-orientation):\n"
+                f"    - peak_w: {self.array2_peak_w}W\n"
+                f"    - tilt: {self.array2_tilt_deg}°, azimuth: {self.array2_az_deg}°\n"
+                f"    - incidence: {model.array2_incidence_deg:.1f}°\n"
+                f"    - POA clear-sky: {model.array2_poa_clear_wm2:.1f} W/m²\n"
+                f"    - expected clear: {model.array2_expected_clear_w:.1f}W\n"
+                f"    - expected corrected: {model.array2_expected_corrected_w:.1f}W\n"
+            )
         _LOGGER.info(
             f"SPVM DIAGNOSTIC - Production Estimate Breakdown:\n"
             f"  Solar Model Params:\n"
@@ -234,13 +258,14 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             f"    - panel_tilt: {self.panel_tilt_deg}°\n"
             f"    - panel_azimuth: {self.panel_az_deg}°\n"
             f"    - site_lat/lon: {self.site_lat:.2f}/{self.site_lon:.2f}\n"
+            f"{array2_info}"
             f"  Solar Geometry:\n"
             f"    - elevation: {model.elevation_deg:.1f}°\n"
             f"    - azimuth: {model.azimuth_deg:.1f}°\n"
-            f"    - incidence: {model.incidence_deg:.1f}°\n"
+            f"    - incidence (array1): {model.incidence_deg:.1f}°\n"
             f"  Irradiance:\n"
             f"    - GHI clear-sky: {model.ghi_clear_wm2:.1f} W/m²\n"
-            f"    - POA clear-sky: {model.poa_clear_wm2:.1f} W/m²\n"
+            f"    - POA clear-sky (total): {model.poa_clear_wm2:.1f} W/m²\n"
             f"  Expected Power (step-by-step):\n"
             f"    - Clear-sky (before corrections): {model.expected_clear_w:.1f}W\n"
             f"    - After cloud/temp/lux corrections: {model.expected_corrected_w:.1f}W\n"
@@ -314,6 +339,12 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             ATTR_DEGRADATION_PCT: self.degradation_pct,
             ATTR_SITE: {"lat": self.site_lat, "lon": self.site_lon, "alt_m": self.site_alt},
             ATTR_PANEL: {"tilt_deg": self.panel_tilt_deg, "azimuth_deg": self.panel_az_deg, "peak_w": self.panel_peak_w},
+            "array2": {
+                "enabled": self.array2_peak_w > 0,
+                "peak_w": self.array2_peak_w,
+                "tilt_deg": self.array2_tilt_deg,
+                "azimuth_deg": self.array2_az_deg,
+            } if self.array2_peak_w > 0 else None,
             "reserve_w": self.reserve_w,
             "cap_max_w": self.cap_max_w,
             "model_elevation_deg": model.elevation_deg,
@@ -348,6 +379,13 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             attrs["hum_now_pct"] = hum
         if cloud is not None:
             attrs["cloud_now_pct"] = cloud
+
+        # Array 2 model outputs (if enabled)
+        if self.array2_peak_w > 0 and model.array2_incidence_deg is not None:
+            attrs["array2_incidence_deg"] = round(model.array2_incidence_deg, 1)
+            attrs["array2_poa_clear_wm2"] = round(model.array2_poa_clear_wm2, 1)
+            attrs["array2_expected_clear_w"] = round(model.array2_expected_clear_w, 1)
+            attrs["array2_expected_corrected_w"] = round(model.array2_expected_corrected_w, 1)
 
         return SPVMData(
             expected_w=float(round(expected_w, 3)),

@@ -45,6 +45,11 @@ class SolarInputs:
     shading_month_start: int = 11        # Month when shading starts (1-12)
     shading_month_end: int = 2           # Month when shading ends (1-12)
 
+    # Second array (optional) for multi-orientation installations (v0.7.4+)
+    array2_peak_w: float = 0.0           # 0 = disabled
+    array2_tilt_deg: float = 15.0        # Typical for pergola/flat roof
+    array2_azimuth_deg: float = 180.0    # South by default
+
 
 @dataclass
 class SolarResult:
@@ -57,6 +62,11 @@ class SolarResult:
     expected_clear_w: float
     expected_corrected_w: float
     lux_factor: Optional[float] = None  # Lux-based correction factor applied (0..1)
+    # Multi-array support (v0.7.4+)
+    array2_incidence_deg: Optional[float] = None
+    array2_poa_clear_wm2: Optional[float] = None
+    array2_expected_clear_w: Optional[float] = None
+    array2_expected_corrected_w: Optional[float] = None
 
 
 def _to_julian_day(dt: datetime) -> float:
@@ -267,21 +277,35 @@ def _seasonal_shading_factor(dt: datetime, shading_pct: float,
 
 def compute(inputs: SolarInputs) -> SolarResult:
     el_deg, az_deg, dec_deg, _ha = _sun_position(inputs.dt_utc, inputs.lat_deg, inputs.lon_deg)
-    inc_deg = _incidence_angle(el_deg, az_deg, inputs.panel_tilt_deg, inputs.panel_azimuth_deg)
 
+    # --- Array 1 (primary) ---
+    inc_deg = _incidence_angle(el_deg, az_deg, inputs.panel_tilt_deg, inputs.panel_azimuth_deg)
     ghi_clear = _clear_sky_ghi(el_deg, inputs.altitude_m)
+
     # Plane-of-array projection: POA ~ GHI * cos(inc)
     cosi = max(0.0, math.cos(math.radians(inc_deg)))
     poa_clear = ghi_clear * (cosi / max(1e-6, math.sin(math.radians(el_deg)))) if el_deg > 0 else 0.0
     poa_clear = max(0.0, poa_clear)
 
     # Expected power (clear sky) before corrections
-    expected_clear = poa_clear * inputs.system_efficiency * (inputs.panel_peak_w / 1000.0)  # W/m2 * eff * kWc
+    expected_clear = poa_clear * inputs.system_efficiency * (inputs.panel_peak_w / 1000.0)
 
-    # Cloud + Temperature corrections (traditional method)
+    # --- Array 2 (optional, for multi-orientation installations) ---
+    array2_inc_deg: Optional[float] = None
+    array2_poa_clear: Optional[float] = None
+    array2_expected_clear: Optional[float] = None
+    array2_expected_corr: Optional[float] = None
+
+    if inputs.array2_peak_w > 0:
+        array2_inc_deg = _incidence_angle(el_deg, az_deg, inputs.array2_tilt_deg, inputs.array2_azimuth_deg)
+        cosi2 = max(0.0, math.cos(math.radians(array2_inc_deg)))
+        array2_poa_clear = ghi_clear * (cosi2 / max(1e-6, math.sin(math.radians(el_deg)))) if el_deg > 0 else 0.0
+        array2_poa_clear = max(0.0, array2_poa_clear)
+        array2_expected_clear = array2_poa_clear * inputs.system_efficiency * (inputs.array2_peak_w / 1000.0)
+
+    # --- Corrections (applied to both arrays) ---
     cloud_temp_factor = _cloud_factor(inputs.cloud_pct) * _temperature_factor(inputs.temp_c)
 
-    # Lux-based real-sky correction (more accurate for thick clouds)
     lux_factor = _lux_correction_factor(
         inputs.lux,
         el_deg,
@@ -289,7 +313,6 @@ def compute(inputs: SolarInputs) -> SolarResult:
         floor_factor=inputs.lux_floor_factor
     )
 
-    # Seasonal shading correction (trees, buildings)
     shading_factor = _seasonal_shading_factor(
         inputs.dt_utc,
         inputs.shading_winter_pct,
@@ -297,15 +320,22 @@ def compute(inputs: SolarInputs) -> SolarResult:
         inputs.shading_month_end
     )
 
-    # Apply corrections: use lux_factor if available, otherwise cloud_temp_factor
-    # When lux is available, it provides a more accurate real-world correction
-    # that captures actual sky conditions (thick vs thin clouds, haze, etc.)
+    # Apply corrections to Array 1
     if lux_factor is not None:
-        # Lux factor already captures real sky conditions, but still apply temp derating and shading
         expected_corr = expected_clear * lux_factor * _temperature_factor(inputs.temp_c) * shading_factor
     else:
-        # Fall back to cloud_pct based correction, with shading
         expected_corr = expected_clear * cloud_temp_factor * shading_factor
+
+    # Apply corrections to Array 2
+    if inputs.array2_peak_w > 0 and array2_expected_clear is not None:
+        if lux_factor is not None:
+            array2_expected_corr = array2_expected_clear * lux_factor * _temperature_factor(inputs.temp_c) * shading_factor
+        else:
+            array2_expected_corr = array2_expected_clear * cloud_temp_factor * shading_factor
+        # Add Array 2 to totals
+        expected_clear += array2_expected_clear
+        expected_corr += array2_expected_corr
+        poa_clear += array2_poa_clear  # Combined POA for reference
 
     return SolarResult(
         elevation_deg=el_deg,
@@ -317,4 +347,8 @@ def compute(inputs: SolarInputs) -> SolarResult:
         expected_clear_w=max(0.0, expected_clear),
         expected_corrected_w=max(0.0, expected_corr),
         lux_factor=lux_factor,
+        array2_incidence_deg=array2_inc_deg,
+        array2_poa_clear_wm2=array2_poa_clear,
+        array2_expected_clear_w=array2_expected_clear,
+        array2_expected_corrected_w=array2_expected_corr,
     )
