@@ -1,6 +1,48 @@
-# 🎛️ Paramètres de correction SPVM v0.7.4
+# 🎛️ Paramètres de correction SPVM v0.7.5
 
 Guide des paramètres configurables pour affiner les prédictions selon votre installation.
+
+---
+
+## 🌍 Open-Meteo API (irradiance réelle) *(v0.7.5+)*
+
+### `use_open_meteo`
+**Activer l'API Open-Meteo pour l'irradiance réelle**
+
+- **Défaut :** `true` (activé)
+- **Type :** booléen
+- **Description :** Utilise les données d'irradiance réelles d'Open-Meteo au lieu du modèle clear-sky théorique.
+
+**Avantages Open-Meteo :**
+- Données météo réelles (GHI, GTI, nuages, température)
+- Pas besoin de calibration locale
+- Précision uniforme partout dans le monde
+- Base pour prévisions futures (J+1, J+7)
+
+**Quand désactiver :**
+- Pas de connexion internet stable
+- Préférence pour le modèle local
+- Tests de comparaison
+
+**Configuration :**
+```yaml
+use_open_meteo: true   # Utilise Open-Meteo (défaut)
+use_open_meteo: false  # Revient au modèle clear-sky
+```
+
+**Fonctionnement :**
+1. SPVM appelle Open-Meteo toutes les 5 minutes (cache)
+2. Récupère GHI et GTI (irradiance sur panneau incliné)
+3. Applique uniquement les corrections température + ombrage
+4. Si API indisponible → fallback automatique sur clear-sky
+
+**Attributs de diagnostic :**
+```yaml
+irradiance_source: "open_meteo"    # ou "clear_sky_model"
+open_meteo_enabled: true
+open_meteo_ghi_wm2: 450.0          # GHI réel
+open_meteo_gti_wm2: 520.0          # POA réel (incliné)
+```
 
 ---
 
@@ -371,4 +413,4 @@ Production finale = Production ciel clair
 ---
 
 **Document mis à jour :** 14 janvier 2026
-**Version SPVM :** 0.7.4
+**Version SPVM :** 0.7.5

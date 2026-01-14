@@ -50,6 +50,11 @@ class SolarInputs:
     array2_tilt_deg: float = 15.0        # Typical for pergola/flat roof
     array2_azimuth_deg: float = 180.0    # South by default
 
+    # Open-Meteo real irradiance data (v0.7.5+) - replaces clear-sky model when available
+    real_ghi_wm2: Optional[float] = None   # Real Global Horizontal Irradiance
+    real_gti_wm2: Optional[float] = None   # Real Global Tilted Irradiance (array 1)
+    real_gti2_wm2: Optional[float] = None  # Real Global Tilted Irradiance (array 2)
+
 
 @dataclass
 class SolarResult:
@@ -67,6 +72,10 @@ class SolarResult:
     array2_poa_clear_wm2: Optional[float] = None
     array2_expected_clear_w: Optional[float] = None
     array2_expected_corrected_w: Optional[float] = None
+    # Open-Meteo real irradiance (v0.7.5+)
+    using_real_irradiance: bool = False  # True if Open-Meteo data was used
+    real_ghi_wm2: Optional[float] = None
+    real_gti_wm2: Optional[float] = None
 
 
 def _to_julian_day(dt: datetime) -> float:
@@ -278,16 +287,32 @@ def _seasonal_shading_factor(dt: datetime, shading_pct: float,
 def compute(inputs: SolarInputs) -> SolarResult:
     el_deg, az_deg, dec_deg, _ha = _sun_position(inputs.dt_utc, inputs.lat_deg, inputs.lon_deg)
 
+    # --- Determine irradiance source: Open-Meteo real data or clear-sky model ---
+    using_real_irradiance = inputs.real_ghi_wm2 is not None
+
+    if using_real_irradiance:
+        # Use real irradiance from Open-Meteo
+        ghi = inputs.real_ghi_wm2
+        # Use GTI if available, otherwise convert GHI to POA
+        if inputs.real_gti_wm2 is not None:
+            poa = inputs.real_gti_wm2
+        else:
+            # Approximate POA from GHI using incidence angle
+            inc_deg = _incidence_angle(el_deg, az_deg, inputs.panel_tilt_deg, inputs.panel_azimuth_deg)
+            cosi = max(0.0, math.cos(math.radians(inc_deg)))
+            poa = ghi * (cosi / max(1e-6, math.sin(math.radians(el_deg)))) if el_deg > 0 else 0.0
+    else:
+        # Use clear-sky model (fallback)
+        ghi = _clear_sky_ghi(el_deg, inputs.altitude_m)
+        inc_deg = _incidence_angle(el_deg, az_deg, inputs.panel_tilt_deg, inputs.panel_azimuth_deg)
+        cosi = max(0.0, math.cos(math.radians(inc_deg)))
+        poa = ghi * (cosi / max(1e-6, math.sin(math.radians(el_deg)))) if el_deg > 0 else 0.0
+
     # --- Array 1 (primary) ---
     inc_deg = _incidence_angle(el_deg, az_deg, inputs.panel_tilt_deg, inputs.panel_azimuth_deg)
-    ghi_clear = _clear_sky_ghi(el_deg, inputs.altitude_m)
+    poa_clear = max(0.0, poa)
 
-    # Plane-of-array projection: POA ~ GHI * cos(inc)
-    cosi = max(0.0, math.cos(math.radians(inc_deg)))
-    poa_clear = ghi_clear * (cosi / max(1e-6, math.sin(math.radians(el_deg)))) if el_deg > 0 else 0.0
-    poa_clear = max(0.0, poa_clear)
-
-    # Expected power (clear sky) before corrections
+    # Expected power before corrections
     expected_clear = poa_clear * inputs.system_efficiency * (inputs.panel_peak_w / 1000.0)
 
     # --- Array 2 (optional, for multi-orientation installations) ---
@@ -298,20 +323,22 @@ def compute(inputs: SolarInputs) -> SolarResult:
 
     if inputs.array2_peak_w > 0:
         array2_inc_deg = _incidence_angle(el_deg, az_deg, inputs.array2_tilt_deg, inputs.array2_azimuth_deg)
-        cosi2 = max(0.0, math.cos(math.radians(array2_inc_deg)))
-        array2_poa_clear = ghi_clear * (cosi2 / max(1e-6, math.sin(math.radians(el_deg)))) if el_deg > 0 else 0.0
+
+        if using_real_irradiance and inputs.real_gti2_wm2 is not None:
+            # Use real GTI for array 2
+            array2_poa_clear = inputs.real_gti2_wm2
+        else:
+            # Calculate from GHI
+            cosi2 = max(0.0, math.cos(math.radians(array2_inc_deg)))
+            array2_poa_clear = ghi * (cosi2 / max(1e-6, math.sin(math.radians(el_deg)))) if el_deg > 0 else 0.0
+
         array2_poa_clear = max(0.0, array2_poa_clear)
         array2_expected_clear = array2_poa_clear * inputs.system_efficiency * (inputs.array2_peak_w / 1000.0)
 
-    # --- Corrections (applied to both arrays) ---
-    cloud_temp_factor = _cloud_factor(inputs.cloud_pct) * _temperature_factor(inputs.temp_c)
-
-    lux_factor = _lux_correction_factor(
-        inputs.lux,
-        el_deg,
-        min_elevation=inputs.lux_min_elevation_deg,
-        floor_factor=inputs.lux_floor_factor
-    )
+    # --- Corrections ---
+    # When using real irradiance, cloud correction is already included in the data
+    # Only apply temperature and shading corrections
+    temp_factor = _temperature_factor(inputs.temp_c)
 
     shading_factor = _seasonal_shading_factor(
         inputs.dt_utc,
@@ -320,18 +347,36 @@ def compute(inputs: SolarInputs) -> SolarResult:
         inputs.shading_month_end
     )
 
-    # Apply corrections to Array 1
-    if lux_factor is not None:
-        expected_corr = expected_clear * lux_factor * _temperature_factor(inputs.temp_c) * shading_factor
+    lux_factor: Optional[float] = None
+
+    if using_real_irradiance:
+        # Real irradiance already includes weather effects, only apply temp + shading
+        expected_corr = expected_clear * temp_factor * shading_factor
     else:
-        expected_corr = expected_clear * cloud_temp_factor * shading_factor
+        # Clear-sky model: apply cloud/lux correction
+        cloud_temp_factor = _cloud_factor(inputs.cloud_pct) * temp_factor
+
+        lux_factor = _lux_correction_factor(
+            inputs.lux,
+            el_deg,
+            min_elevation=inputs.lux_min_elevation_deg,
+            floor_factor=inputs.lux_floor_factor
+        )
+
+        if lux_factor is not None:
+            expected_corr = expected_clear * lux_factor * temp_factor * shading_factor
+        else:
+            expected_corr = expected_clear * cloud_temp_factor * shading_factor
 
     # Apply corrections to Array 2
     if inputs.array2_peak_w > 0 and array2_expected_clear is not None:
-        if lux_factor is not None:
-            array2_expected_corr = array2_expected_clear * lux_factor * _temperature_factor(inputs.temp_c) * shading_factor
+        if using_real_irradiance:
+            array2_expected_corr = array2_expected_clear * temp_factor * shading_factor
+        elif lux_factor is not None:
+            array2_expected_corr = array2_expected_clear * lux_factor * temp_factor * shading_factor
         else:
-            array2_expected_corr = array2_expected_clear * cloud_temp_factor * shading_factor
+            array2_expected_corr = array2_expected_clear * _cloud_factor(inputs.cloud_pct) * temp_factor * shading_factor
+
         # Add Array 2 to totals
         expected_clear += array2_expected_clear
         expected_corr += array2_expected_corr
@@ -342,7 +387,7 @@ def compute(inputs: SolarInputs) -> SolarResult:
         azimuth_deg=az_deg,
         declination_deg=dec_deg,
         incidence_deg=inc_deg,
-        ghi_clear_wm2=ghi_clear,
+        ghi_clear_wm2=ghi,
         poa_clear_wm2=poa_clear,
         expected_clear_w=max(0.0, expected_clear),
         expected_corrected_w=max(0.0, expected_corr),
@@ -351,4 +396,7 @@ def compute(inputs: SolarInputs) -> SolarResult:
         array2_poa_clear_wm2=array2_poa_clear,
         array2_expected_clear_w=array2_expected_clear,
         array2_expected_corrected_w=array2_expected_corr,
+        using_real_irradiance=using_real_irradiance,
+        real_ghi_wm2=inputs.real_ghi_wm2,
+        real_gti_wm2=inputs.real_gti_wm2,
     )

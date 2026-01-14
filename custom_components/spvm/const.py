@@ -1,4 +1,4 @@
-"""Constantes Smart PV Meter (SPVM) v0.7.4 + compat rétro."""
+"""Constantes Smart PV Meter (SPVM) v0.7.5 + compat rétro."""
 from __future__ import annotations
 from typing import Final
 
@@ -96,6 +96,10 @@ CONF_SHADING_MONTH_START: Final = "shading_month_start"    # Mois début ombrage
 DEF_SHADING_MONTH_START: Final = 11                         # Novembre par défaut
 CONF_SHADING_MONTH_END: Final = "shading_month_end"        # Mois fin ombrage (1-12)
 DEF_SHADING_MONTH_END: Final = 2                            # Février par défaut
+
+# Open-Meteo API (v0.7.5+) - Irradiance réelle au lieu de modèle clear-sky
+CONF_USE_OPEN_METEO: Final = "use_open_meteo"              # Activer Open-Meteo API
+DEF_USE_OPEN_METEO: Final = True                            # Activé par défaut
 
 # Intervalle / lissage / debug
 CONF_UPDATE_INTERVAL_SECONDS: Final = "update_interval_seconds"

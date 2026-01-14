@@ -1,5 +1,41 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.7.5 - Open-Meteo Real Irradiance (January 2026)
+
+### Added
+- 🌍 **Open-Meteo API integration** - Real solar irradiance data instead of theoretical clear-sky model
+  - Fetches actual GHI (Global Horizontal Irradiance) from Open-Meteo
+  - Uses GTI (Global Tilted Irradiance) for accurate POA calculation
+  - Automatic fallback to clear-sky model if API unavailable
+  - 5-minute cache to avoid API rate limits
+- 📊 **New diagnostic attributes**:
+  - `irradiance_source`: "open_meteo" or "clear_sky_model"
+  - `open_meteo_enabled`: Whether Open-Meteo is configured
+  - `open_meteo_ghi_wm2`: Real GHI from Open-Meteo
+  - `open_meteo_gti_wm2`: Real GTI (POA) from Open-Meteo
+- 🌡️ **Weather data fallback** - Uses Open-Meteo cloud/temp if local sensors unavailable
+
+### Benefits
+- **More accurate predictions** - Real weather data vs theoretical clear-sky
+- **No calibration needed** - Works out of the box for any location
+- **Universal** - Same accuracy regardless of local sensors
+- **Future-ready** - Foundation for forecast features (J+1, J+7)
+
+### Configuration
+Open-Meteo is **enabled by default**. To disable:
+```yaml
+use_open_meteo: false  # Reverts to clear-sky model
+```
+
+### Technical Details
+- API endpoint: `https://api.open-meteo.com/v1/forecast`
+- Parameters: `shortwave_radiation`, `global_tilted_irradiance`, `cloud_cover`, `temperature_2m`
+- GTI uses panel tilt/azimuth for accurate POA calculation
+- When real irradiance is available, cloud/lux corrections are skipped (already in data)
+- Only temperature and seasonal shading corrections are applied
+
+---
+
 ## 📦 Version 0.7.4 - Multi-Array Support (January 2026)
 
 ### Added

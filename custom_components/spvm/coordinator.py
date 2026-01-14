@@ -36,6 +36,8 @@ from .const import (
     CONF_LUX_MAX_CHANGE_PCT, DEF_LUX_MAX_CHANGE_PCT,
     CONF_SHADING_WINTER_PCT, DEF_SHADING_WINTER_PCT,
     CONF_SHADING_MONTH_START, DEF_SHADING_MONTH_START, CONF_SHADING_MONTH_END, DEF_SHADING_MONTH_END,
+    # Open-Meteo API
+    CONF_USE_OPEN_METEO, DEF_USE_OPEN_METEO,
     # timing
     CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL,
     CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW,
@@ -44,6 +46,7 @@ from .const import (
     ATTR_SITE, ATTR_PANEL, ATTR_NOTE, NOTE_SOLAR_MODEL,
 )
 from .solar_model import SolarInputs, compute as solar_compute
+from .open_meteo import OpenMeteoClient, SolarIrradiance
 
 _LOGGER = logging.getLogger(__name__)
 Number = Union[float, int]
@@ -138,6 +141,20 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         self.shading_month_start: int = int(data.get(CONF_SHADING_MONTH_START, DEF_SHADING_MONTH_START))
         self.shading_month_end: int = int(data.get(CONF_SHADING_MONTH_END, DEF_SHADING_MONTH_END))
 
+        # Open-Meteo API (v0.7.5+)
+        self.use_open_meteo: bool = bool(data.get(CONF_USE_OPEN_METEO, DEF_USE_OPEN_METEO))
+        self._open_meteo_client: Optional[OpenMeteoClient] = None
+        if self.use_open_meteo and self.site_lat != 0.0 and self.site_lon != 0.0:
+            self._open_meteo_client = OpenMeteoClient(
+                latitude=self.site_lat,
+                longitude=self.site_lon,
+                panel_tilt=self.panel_tilt_deg,
+                panel_azimuth=self.panel_az_deg,
+                array2_tilt=self.array2_tilt_deg if self.array2_peak_w > 0 else None,
+                array2_azimuth=self.array2_az_deg if self.array2_peak_w > 0 else None,
+            )
+            _LOGGER.info(f"SPVM: Open-Meteo API enabled for location {self.site_lat:.2f}, {self.site_lon:.2f}")
+
         # Timing
         self.update_interval_s: int = int(data.get(CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL))
         self.smoothing_window_s: int = int(data.get(CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW))
@@ -208,6 +225,31 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         # Cache dernière valeur PV valide pour tolérance aux erreurs temporaires
         self._last_pv_w = pv_w
 
+        # ---- Fetch real irradiance from Open-Meteo (v0.7.5+) ----
+        real_ghi: Optional[float] = None
+        real_gti: Optional[float] = None
+        real_gti2: Optional[float] = None
+        open_meteo_data: Optional[SolarIrradiance] = None
+
+        if self._open_meteo_client is not None:
+            try:
+                open_meteo_data = await self._open_meteo_client.fetch_current()
+                if open_meteo_data is not None:
+                    real_ghi = open_meteo_data.ghi_wm2
+                    real_gti = open_meteo_data.gti_wm2
+                    real_gti2 = open_meteo_data.gti2_wm2
+                    # Use Open-Meteo cloud/temp if local sensors not available
+                    if cloud is None and open_meteo_data.cloud_cover_pct is not None:
+                        cloud = open_meteo_data.cloud_cover_pct
+                    if temp is None and open_meteo_data.temperature_c is not None:
+                        temp = open_meteo_data.temperature_c
+                    _LOGGER.debug(
+                        f"Open-Meteo data: GHI={real_ghi:.1f} W/m², "
+                        f"GTI={real_gti:.1f if real_gti else 'N/A'} W/m²"
+                    )
+            except Exception as e:
+                _LOGGER.warning(f"Open-Meteo fetch failed, using clear-sky model: {e}")
+
         # ---- Physical solar model ----
         now_utc = datetime.now(timezone.utc)
         inputs = SolarInputs(
@@ -231,6 +273,10 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             array2_peak_w=self.array2_peak_w,
             array2_tilt_deg=self.array2_tilt_deg,
             array2_azimuth_deg=self.array2_az_deg,
+            # Open-Meteo real irradiance (v0.7.5+)
+            real_ghi_wm2=real_ghi,
+            real_gti_wm2=real_gti,
+            real_gti2_wm2=real_gti2,
         )
         model = solar_compute(inputs)
 
@@ -246,12 +292,22 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
                 f"    - peak_w: {self.array2_peak_w}W\n"
                 f"    - tilt: {self.array2_tilt_deg}°, azimuth: {self.array2_az_deg}°\n"
                 f"    - incidence: {model.array2_incidence_deg:.1f}°\n"
-                f"    - POA clear-sky: {model.array2_poa_clear_wm2:.1f} W/m²\n"
+                f"    - POA: {model.array2_poa_clear_wm2:.1f} W/m²\n"
                 f"    - expected clear: {model.array2_expected_clear_w:.1f}W\n"
                 f"    - expected corrected: {model.array2_expected_corrected_w:.1f}W\n"
             )
+        irradiance_source = "Open-Meteo API" if model.using_real_irradiance else "Clear-sky model"
+        open_meteo_info = ""
+        if model.using_real_irradiance:
+            open_meteo_info = (
+                f"  Open-Meteo (real irradiance):\n"
+                f"    - GHI: {model.real_ghi_wm2:.1f} W/m²\n"
+                f"    - GTI (POA): {model.real_gti_wm2:.1f if model.real_gti_wm2 else 'calculated'} W/m²\n"
+            )
         _LOGGER.info(
             f"SPVM DIAGNOSTIC - Production Estimate Breakdown:\n"
+            f"  Irradiance Source: {irradiance_source}\n"
+            f"{open_meteo_info}"
             f"  Solar Model Params:\n"
             f"    - panel_peak_w: {self.panel_peak_w}W\n"
             f"    - system_efficiency: {self.system_eff}\n"
@@ -264,16 +320,15 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             f"    - azimuth: {model.azimuth_deg:.1f}°\n"
             f"    - incidence (array1): {model.incidence_deg:.1f}°\n"
             f"  Irradiance:\n"
-            f"    - GHI clear-sky: {model.ghi_clear_wm2:.1f} W/m²\n"
-            f"    - POA clear-sky (total): {model.poa_clear_wm2:.1f} W/m²\n"
+            f"    - GHI: {model.ghi_clear_wm2:.1f} W/m²\n"
+            f"    - POA (total): {model.poa_clear_wm2:.1f} W/m²\n"
             f"  Expected Power (step-by-step):\n"
-            f"    - Clear-sky (before corrections): {model.expected_clear_w:.1f}W\n"
-            f"    - After cloud/temp/lux corrections: {model.expected_corrected_w:.1f}W\n"
+            f"    - Before corrections: {model.expected_clear_w:.1f}W\n"
+            f"    - After temp/shading corrections: {model.expected_corrected_w:.1f}W\n"
             f"    - After degradation ({self.degradation_pct}%): {expected_w:.1f}W (before cap)\n"
             f"    - Final (after cap {self.cap_max_w}W): {expected_w:.1f}W\n"
             f"  Correction Factors:\n"
-            f"    - Lux correction: {model.lux_factor if model.lux_factor is not None else 'N/A (using cloud_pct)'}\n"
-            f"    - Lux value: {lux if lux is not None else 'N/A'}\n"
+            f"    - Lux correction: {model.lux_factor if model.lux_factor is not None else 'N/A'}\n"
             f"    - Cloud coverage: {cloud if cloud is not None else 'N/A'}%\n"
             f"    - Temperature: {temp if temp is not None else 'N/A'}°C\n"
             f"  Current Production:\n"
@@ -356,8 +411,15 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             "debug_pv_w": round(pv_w, 1),
             "debug_house_w": round(house_w, 1),
             "debug_surplus_virtual": round(surplus_virtual, 1),
-            ATTR_NOTE: "Physical clear-sky + incidence; cloud & temp corrections; lux correction if available; then degradation, reserve, cap.",
+            ATTR_NOTE: "Open-Meteo real irradiance or clear-sky model; temp & shading corrections; then degradation, cap.",
+            # Open-Meteo status (v0.7.5+)
+            "irradiance_source": "open_meteo" if model.using_real_irradiance else "clear_sky_model",
+            "open_meteo_enabled": self.use_open_meteo,
         }
+        # Open-Meteo data (if available)
+        if model.using_real_irradiance:
+            attrs["open_meteo_ghi_wm2"] = round(model.real_ghi_wm2, 1) if model.real_ghi_wm2 else None
+            attrs["open_meteo_gti_wm2"] = round(model.real_gti_wm2, 1) if model.real_gti_wm2 else None
         if model.lux_factor is not None:
             attrs["lux_factor"] = round(model.lux_factor, 3)
             attrs["lux_correction_active"] = True
