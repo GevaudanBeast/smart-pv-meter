@@ -321,7 +321,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             open_meteo_info = (
                 f"  Open-Meteo (real irradiance):\n"
                 f"    - GHI: {model.real_ghi_wm2:.1f} W/m²\n"
-                f"    - GTI (POA): {model.real_gti_wm2:.1f if model.real_gti_wm2 else 'calculated'} W/m²\n"
+                f"    - GTI (POA): {(model.real_gti_wm2 or 0.0):.1f} W/m²\n"
             )
         _LOGGER.info(
             f"SPVM DIAGNOSTIC - Production Estimate Breakdown:\n"
