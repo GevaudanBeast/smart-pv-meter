@@ -232,28 +232,23 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         open_meteo_data: Optional[SolarIrradiance] = None
 
         if self._open_meteo_client is not None:
-            # Le try ne couvre que l'appel réseau : une erreur de journalisation
-            # ne doit pas provoquer un repli sur le modèle de ciel clair.
             try:
                 open_meteo_data = await self._open_meteo_client.fetch_current()
+                if open_meteo_data is not None:
+                    real_ghi = open_meteo_data.ghi_wm2
+                    real_gti = open_meteo_data.gti_wm2
+                    real_gti2 = open_meteo_data.gti2_wm2
+                    # Use Open-Meteo cloud/temp if local sensors not available
+                    if cloud is None and open_meteo_data.cloud_cover_pct is not None:
+                        cloud = open_meteo_data.cloud_cover_pct
+                    if temp is None and open_meteo_data.temperature_c is not None:
+                        temp = open_meteo_data.temperature_c
+                    _LOGGER.debug(
+                        f"Open-Meteo data: GHI={real_ghi:.1f} W/m², "
+                        f"GTI={real_gti:.1f if real_gti else 'N/A'} W/m²"
+                    )
             except Exception as e:
                 _LOGGER.warning(f"Open-Meteo fetch failed, using clear-sky model: {e}")
-                open_meteo_data = None
-
-            if open_meteo_data is not None:
-                real_ghi = open_meteo_data.ghi_wm2
-                real_gti = open_meteo_data.gti_wm2
-                real_gti2 = open_meteo_data.gti2_wm2
-                # Use Open-Meteo cloud/temp if local sensors not available
-                if cloud is None and open_meteo_data.cloud_cover_pct is not None:
-                    cloud = open_meteo_data.cloud_cover_pct
-                if temp is None and open_meteo_data.temperature_c is not None:
-                    temp = open_meteo_data.temperature_c
-                gti_str = f"{real_gti:.1f}" if real_gti is not None else "N/A"
-                _LOGGER.debug(
-                    f"Open-Meteo data: GHI={real_ghi:.1f} W/m², "
-                    f"GTI={gti_str} W/m²"
-                )
 
         # ---- Lux as trend validator (v0.7.5+) ----
         # Compare lux trend with Open-Meteo to detect discrepancies
