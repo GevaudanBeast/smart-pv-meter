@@ -1,5 +1,25 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## 📦 Version 0.7.7 - Correctif Open-Meteo (August 2026)
+
+### Fixed
+- 🐛 **f-string invalide dans `coordinator.py`** - `f"{real_gti:.1f if real_gti else 'N/A'}"` levait une `ValueError` à chaque cycle de rafraîchissement
+  - Le spécificateur de format d'une f-string ne peut pas contenir d'expression conditionnelle
+  - Le journal affichait `Open-Meteo fetch failed, using clear-sky model: Invalid format specifier ...` alors qu'aucun échec réseau n'avait eu lieu
+  - Corrigé via une variable intermédiaire, en reprenant l'idiome déjà utilisé dans `open_meteo.py`
+
+### Improved
+- 🎯 **Portée du `try` Open-Meteo réduite au seul appel réseau `fetch_current()`**
+  - Le traitement des données et la journalisation sont sortis du `try`
+  - Une erreur de journalisation ne peut plus déclencher le repli sur le modèle de ciel clair
+
+### Technical Details
+- Les neuf fichiers Python ont été analysés par parcours d'arbre syntaxique, cette occurrence était la seule
+- Aucune logique de calcul photovoltaïque modifiée
+- Aucune dépendance ajoutée
+
+---
+
 ## 📦 Version 0.7.6 - Code Cleanup & Maintenance (January 2026)
 
 ### Removed

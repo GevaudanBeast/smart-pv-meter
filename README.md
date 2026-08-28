@@ -1,6 +1,6 @@
-# 🎯 Smart PV Meter (SPVM) v0.7.6
+# 🎯 Smart PV Meter (SPVM) v0.7.7
 
-[![Version](https://img.shields.io/badge/version-0.7.6-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
+[![Version](https://img.shields.io/badge/version-0.7.7-blue.svg)](https://github.com/GevaudanBeast/smart-pv-meter/releases)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1+-blue.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -461,7 +461,11 @@ The yield ratio shows performance:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
-### Version 0.7.6 (Current - January 2026)
+### Version 0.7.7 (Current - August 2026)
+- 🐛 **Fix f-string** - Corrige une `ValueError` levée à chaque cycle de rafraîchissement
+- 🎯 **Portée du try réduite** - Une erreur de journalisation ne provoque plus de repli sur le modèle clear-sky
+
+### Version 0.7.6 (January 2026)
 - 🧹 **Code cleanup** - Removed obsolete files and k-NN legacy code
 - 📝 **Updated documentation** - Simplified and modernized
 
