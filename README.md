@@ -514,4 +514,4 @@ MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Smart PV Meter v0.7.2** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)
+**Smart PV Meter v0.7.7** - Built with ❤️ by [@GevaudanBeast](https://github.com/GevaudanBeast)

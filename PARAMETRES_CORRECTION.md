@@ -1,4 +1,4 @@
-# 🎛️ Paramètres de correction SPVM v0.7.5
+# 🎛️ Paramètres de correction SPVM v0.7.7
 
 Guide des paramètres configurables pour affiner les prédictions selon votre installation.
 
@@ -412,5 +412,5 @@ Production finale = Production ciel clair
 
 ---
 
-**Document mis à jour :** 14 janvier 2026
-**Version SPVM :** 0.7.5
+**Document mis à jour :** 28 août 2026
+**Version SPVM :** 0.7.7
