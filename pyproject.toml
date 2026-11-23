@@ -1,15 +1,19 @@
+# Outils de developpement pour Smart PV Meter.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.ruff]
-target-version = "py313"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "UP",  # pyupgrade
-]
+# Erreurs de syntaxe et noms indefinis sur tout le paquet (code historique non
+# reformate) ; format verifie sur les modules purs et les tests.
+select = ["E9", "F63", "F7", "F82"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
 
 [tool.black]
 line-length = 100

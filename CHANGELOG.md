@@ -1,5 +1,20 @@
 # SPVM - CHANGELOG & RELEASE NOTES
 
+## [0.7.8] - 2026-11-23
+
+### Corrige
+- Production attendue : les valeurs horaires Open-Meteo de rayonnement sont des moyennes de l'heure precedente. Elles sont maintenant placees au milieu de l'heure et interpolees : plus de marches horaires ni de decalage d'une heure (constat du 22/11 : pic modelise environ 2 h apres le pic reel). Prevision sur 2 jours pour couvrir le passage de minuit UTC.
+- PV indisponible : la derniere valeur n'est plus reutilisee sans limite, 5 min au plus, puis les capteurs passent indisponibles.
+- Lissage : `smoothing_window_seconds` etait lu mais jamais applique ; le surplus net est maintenant une moyenne glissante sur cette fenetre (valeur instantanee en attribut).
+- Journal : le bloc DIAGNOSTIC passe en DEBUG (il etait ecrit en INFO toutes les 30 s), avertissements une seule fois par incident.
+- Options : un changement d'options recharge l'entree (avant : redemarrage de Home Assistant necessaire).
+
+### Ajoute
+- `state_class: measurement` sur les trois capteurs (statistiques longue duree).
+- Module pur `calc.py`, tests pytest, workflow Tests (pytest, ruff).
+- Workflow Release : une etiquette avec suffixe (v0.7.8-beta.1) reste une pre-version et se compare a la version du manifest sans suffixe.
+
+
 ## 📦 Version 0.7.7 - Correctif Open-Meteo (August 2026)
 
 ### Fixed
