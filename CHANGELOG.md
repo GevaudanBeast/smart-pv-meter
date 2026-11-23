@@ -11,7 +11,7 @@
 
 ### Ajoute
 - Icone de l'integration : dossier `custom_components/spvm/brand/` (icon.png 256x256, icon@2x.png 512x512, carres et rognes), format pris en charge par Home Assistant 2026.3 et suivants et par le controle "brands" de HACS. Plus besoin du depot home-assistant/brands.
-- Workflow Validate (HACS, hassfest).
+- Workflow Validate (HACS, hassfest) ; corrections pour le faire passer : `domains` retire de hacs.json, cle `icon` retiree du manifest (refusee par hassfest), categorie `energy.solar_batteries` ajoutee, espaces en debut de texte retires des traductions.
 - `state_class: measurement` sur les trois capteurs (statistiques longue duree).
 - Module pur `calc.py`, tests pytest, workflow Tests (pytest, ruff).
 - Workflow Release : une etiquette avec suffixe (v0.7.8-beta.1) reste une pre-version et se compare a la version du manifest sans suffixe.
