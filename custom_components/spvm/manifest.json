@@ -1,14 +1,16 @@
 {
   "domain": "spvm",
   "name": "Smart PV Meter",
-  "version": "0.7.8",
-  "documentation": "https://github.com/GevaudanBeast/smart-pv-meter",
-  "issue_tracker": "https://github.com/GevaudanBeast/smart-pv-meter/issues",
-  "icon": "mdi:solar-power",
+  "categories": [
+    "energy.solar_batteries"
+  ],
   "codeowners": [
     "@GevaudanBeast"
   ],
   "config_flow": true,
+  "documentation": "https://github.com/GevaudanBeast/smart-pv-meter",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/GevaudanBeast/smart-pv-meter/issues",
   "requirements": [],
-  "iot_class": "local_polling"
+  "version": "0.7.8"
 }
