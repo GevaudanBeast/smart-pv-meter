@@ -47,6 +47,7 @@ from .const import (
 )
 from .solar_model import SolarInputs, compute as solar_compute
 from .open_meteo import OpenMeteoClient, SolarIrradiance
+from .calc import RollingMean, pv_with_fallback, surplus_net
 
 _LOGGER = logging.getLogger(__name__)
 Number = Union[float, int]
@@ -76,6 +77,8 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         self.hass = hass
         self.entry = entry
         self._last_pv_w: Optional[float] = None  # Cache dernière valeur PV pour tolérance
+        self._last_pv_time: Optional[datetime] = None  # Horodatage de la dernière valeur PV lue
+        self._warned: set[str] = set()  # Incidents déjà signalés (un avertissement par incident)
         self._last_lux: Optional[float] = None   # Cache dernière valeur lux pour filtre anti-reflet
 
         data = {**(entry.data or {}), **(entry.options or {})}
@@ -158,6 +161,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         # Timing
         self.update_interval_s: int = int(data.get(CONF_UPDATE_INTERVAL_SECONDS, DEF_UPDATE_INTERVAL))
         self.smoothing_window_s: int = int(data.get(CONF_SMOOTHING_WINDOW_SECONDS, DEF_SMOOTHING_WINDOW))
+        self._surplus_mean = RollingMean(self.smoothing_window_s)
 
         super().__init__(
             hass,
@@ -199,22 +203,35 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         if lux_raw is not None and not lux_filtered:
             self._last_lux = lux_raw
 
-        # Log detailed sensor state for debugging
-        if pv is None:
+        # PV indisponible : dernière valeur réutilisée au plus PV_FALLBACK_MAX_AGE_S
+        now_check = datetime.now(timezone.utc)
+        pv_w_in = pv * (KW_TO_W if self.unit_pv == UNIT_KW else 1.0) if pv is not None else None
+        pv_w_used, pv_fallback = pv_with_fallback(pv_w_in, self._last_pv_w, self._last_pv_time, now_check)
+        if pv_fallback:
             pv_state_str = pv_state.state if pv_state else "MISSING"
-            _LOGGER.warning(
-                f"PV sensor ({self.pv_entity}) has non-numeric state: '{pv_state_str}'. "
-                f"Using last known value: {self._last_pv_w}W"
-            )
-            if self._last_pv_w is not None:
-                pv = self._last_pv_w / (KW_TO_W if self.unit_pv == UNIT_KW else 1.0)
-            else:
-                raise UpdateFailed(f"pv_sensor has no numeric state ('{pv_state_str}') and no cached value available")
+            if "pv" not in self._warned:
+                _LOGGER.warning(
+                    "PV sensor (%s) has non-numeric state '%s'; last value reused for 5 min at most",
+                    self.pv_entity, pv_state_str,
+                )
+                self._warned.add("pv")
+            if pv_w_used is None:
+                raise UpdateFailed(f"pv_sensor has no numeric state ('{pv_state_str}') and no recent value")
+            pv = pv_w_used / (KW_TO_W if self.unit_pv == UNIT_KW else 1.0)
+        else:
+            if "pv" in self._warned:
+                _LOGGER.info("PV sensor (%s) is available again", self.pv_entity)
+                self._warned.discard("pv")
+            self._last_pv_time = now_check
 
         if house is None:
             house_state_str = house_state.state if house_state else "MISSING"
-            _LOGGER.warning(f"House sensor ({self.house_entity}) has non-numeric state: '{house_state_str}'")
+            if "house" not in self._warned:
+                _LOGGER.warning(f"House sensor ({self.house_entity}) has non-numeric state: '{house_state_str}'")
+                self._warned.add("house")
             raise UpdateFailed(f"house_sensor has no numeric state ('{house_state_str}')")
+
+        self._warned.discard("house")
 
         # Convert to W per sensor unit
         pv_w = pv * (KW_TO_W if self.unit_pv == UNIT_KW else 1.0)
@@ -222,8 +239,9 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
         grid_w = grid * (KW_TO_W if self.unit_grid == UNIT_KW else 1.0) if grid is not None else None
         batt_w = batt * (KW_TO_W if self.unit_battery == UNIT_KW else 1.0) if batt is not None else None
 
-        # Cache dernière valeur PV valide pour tolérance aux erreurs temporaires
-        self._last_pv_w = pv_w
+        # Cache dernière valeur PV valide (seulement si lue, pas si réutilisée)
+        if not pv_fallback:
+            self._last_pv_w = pv_w
 
         # ---- Fetch real irradiance from Open-Meteo (v0.7.5+) ----
         real_ghi: Optional[float] = None
@@ -328,7 +346,7 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
                 f"    - GHI: {model.real_ghi_wm2:.1f} W/m²\n"
                 f"    - GTI (POA): {(model.real_gti_wm2 or 0.0):.1f} W/m²\n"
             )
-        _LOGGER.info(
+        _LOGGER.debug(
             f"SPVM DIAGNOSTIC - Production Estimate Breakdown:\n"
             f"  Irradiance Source: {irradiance_source}\n"
             f"{open_meteo_info}"
@@ -399,7 +417,9 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             _LOGGER.debug(f"SPVM grid_w={grid_w:.1f}W, export_w={export_w:.1f}W")
             surplus_virtual = max(surplus_virtual, export_w)
             _LOGGER.debug(f"SPVM surplus_virtual after grid adjustment: {surplus_virtual:.1f}W")
-        surplus_net_w = max(surplus_virtual - float(self.reserve_w), 0.0)
+        surplus_instant_w = surplus_net(pv_w, house_w, grid_w, float(self.reserve_w))
+        self._surplus_mean.add(datetime.now(timezone.utc), surplus_instant_w)
+        surplus_net_w = self._surplus_mean.mean() or 0.0
         _LOGGER.debug(f"SPVM surplus_net_w final: {surplus_net_w:.1f}W")
 
         attrs: Dict[str, Any] = {
@@ -435,6 +455,9 @@ class SPVMCoordinator(DataUpdateCoordinator[SPVMData]):
             "debug_pv_w": round(pv_w, 1),
             "debug_house_w": round(house_w, 1),
             "debug_surplus_virtual": round(surplus_virtual, 1),
+            "surplus_instant_w": round(surplus_instant_w, 1),
+            "smoothing_window_s": self.smoothing_window_s,
+            "pv_fallback_used": pv_fallback,
             ATTR_NOTE: "Open-Meteo real irradiance or clear-sky model; temp & shading corrections; then degradation, cap.",
             # Open-Meteo status (v0.7.5+)
             "irradiance_source": "open_meteo" if model.using_real_irradiance else "clear_sky_model",

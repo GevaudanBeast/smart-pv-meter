@@ -5,7 +5,7 @@ from typing import Any, Optional, List
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -74,6 +74,7 @@ class SPVMExpectedProduction(_Base):
         super().__init__(coordinator, entry, S_SPVM_EXPECTED_PRODUCTION, L_EXPECTED_PRODUCTION, "expected_production")
         self._attr_native_unit_of_measurement = UNIT_W
         self._attr_device_class = "power"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self) -> float | None:
@@ -101,6 +102,7 @@ class SPVMYieldRatio(_Base):
     def __init__(self, coordinator: SPVMCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry, S_SPVM_YIELD_RATIO, L_YIELD_RATIO, "yield_ratio")
         self._attr_native_unit_of_measurement = UNIT_PERCENT
+        self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self) -> float | None:
@@ -141,6 +143,7 @@ class SPVMSurplusNet(_Base):
         super().__init__(coordinator, entry, S_SPVM_SURPLUS_NET, L_SURPLUS_NET, "surplus_net")
         self._attr_native_unit_of_measurement = UNIT_W
         self._attr_device_class = "power"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def native_value(self) -> float | None:

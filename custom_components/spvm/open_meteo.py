@@ -16,6 +16,8 @@ import asyncio
 
 import aiohttp
 
+from .calc import interpolate_hourly_mean
+
 _LOGGER = logging.getLogger(__name__)
 
 # Open-Meteo API endpoint
@@ -156,7 +158,7 @@ class OpenMeteoClient:
             url = f"{API_URL}?latitude={self.latitude}&longitude={self.longitude}"
             url += f"&hourly={','.join(hourly_params)},global_tilted_irradiance"
             url += f"&tilt={self.panel_tilt}&azimuth={self.panel_azimuth_om}"
-            url += "&forecast_days=1&timezone=UTC"
+            url += "&forecast_days=2&timezone=UTC"
 
             _LOGGER.debug(f"Open-Meteo request: {url}")
 
@@ -207,11 +209,18 @@ class OpenMeteoClient:
                 idx = 0
                 _LOGGER.debug(f"Current hour {current_hour_str} not in response, using index 0")
 
-            # Extract values
-            ghi = hourly.get("shortwave_radiation", [None])[idx]
-            dni = hourly.get("direct_normal_irradiance", [None])[idx]
-            dhi = hourly.get("diffuse_radiation", [None])[idx]
-            gti = hourly.get("global_tilted_irradiance", [None])[idx]
+            # Radiation values are means over the preceding hour: interpolate
+            # them at the current time (no hourly steps, no 1 h lag).
+            def _interp(key: str) -> Optional[float]:
+                values = hourly.get(key)
+                if not values:
+                    return None
+                return interpolate_hourly_mean(times, values, now)
+
+            ghi = _interp("shortwave_radiation")
+            dni = _interp("direct_normal_irradiance")
+            dhi = _interp("diffuse_radiation")
+            gti = _interp("global_tilted_irradiance")
             cloud = hourly.get("cloud_cover", [None])[idx]
             temp = hourly.get("temperature_2m", [None])[idx]
 
