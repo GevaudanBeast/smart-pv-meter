@@ -10,6 +10,8 @@
 - Options : un changement d'options recharge l'entree (avant : redemarrage de Home Assistant necessaire).
 
 ### Ajoute
+- Icone de l'integration : dossier `custom_components/spvm/brand/` (icon.png 256x256, icon@2x.png 512x512, carres et rognes), format pris en charge par Home Assistant 2026.3 et suivants et par le controle "brands" de HACS. Plus besoin du depot home-assistant/brands.
+- Workflow Validate (HACS, hassfest).
 - `state_class: measurement` sur les trois capteurs (statistiques longue duree).
 - Module pur `calc.py`, tests pytest, workflow Tests (pytest, ruff).
 - Workflow Release : une etiquette avec suffixe (v0.7.8-beta.1) reste une pre-version et se compare a la version du manifest sans suffixe.
